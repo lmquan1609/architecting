@@ -72,83 +72,107 @@ Then restart: `sudo systemctl restart postgresql`
 
 ### 1. Switch to postgres user and access PostgreSQL
 bash
+
 `sudo -u postgres psql`
 
 
 ### 2. Create the dbadmin user with password
 sql
+
 `CREATE USER dbadmin WITH PASSWORD 'demoPassword';`
 
 
 ### 3. Grant privileges on the demo database
 sql
+
 `GRANT ALL PRIVILEGES ON DATABASE providers TO dbadmin;`
 
 
 ### 4. Connect to the demo database
 sql
+
 `\c demo`
 
 
 ### 5. Grant schema privileges (required for PostgreSQL 15+)
 sql
+
 `GRANT ALL ON SCHEMA public TO dbadmin;`
+
 `GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dbadmin;`
+
 `GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;`
 
 
 ### 6. Exit psql
 sql
+
 `\q`
 
 ### 7. Test localhost connection
 bash
+
 `psql -h localhost -U dbadmin -d demo`
 
 
 ### 8. Configure authentication
+
 Edit the `pg_hba.conf` file:
+
 bash
+
 `sudo vi /var/lib/pgsql/data/pg_hba.conf`
 
 
 Find and change:
+
 `listen_addresses = 'localhost'`
 
 
 To:
+
 `listen_addresses = '*'`
 
 
 Add this line before other rules (for local connections):
+
 `host    demo    dbadmin    127.0.0.1/32    md5`
 
 
 For remote connections from specific IP:
+
 `host    demo    dbadmin    10.0.0.0/16    md5`
 
 
 Or for any IP (less secure):
+
 `host    demo    dbadmin    0.0.0.0/0    md5`
 
 
 ### 9. Restart PostgreSQL
+
 bash
+
 `sudo systemctl restart postgresql`
 
 
 ### 10. Verify PostgreSQL is listening
+
 bash
+
 `sudo ss -tuln | grep 5432`
 
 You should see 0.0.0.0:5432 instead of 127.0.0.1:5432
 
 
 ### 11. Test the connection
+
 bash
+
 `psql -h localhost -U dbadmin -d demo`
 
 Example:
+
 `psql -h 10.0.147.111 -U dbadmin -d demo`
 
 Enter password: `demoPassword`
@@ -178,24 +202,37 @@ DELETE FROM demo;
 ```
 
 ### 12. List tables and records
+
 sql
+
 `\dt`
 
 ## PART 3 - INSTALL AND CONFIGURE APPLICATION
 
 ### 1. Update system
-dnf update -y
+
+Login to EC2 via Session Manager
+
+`sudo -i`
+
+`dnf update -y`
 
 ### 2. Install Node.js 22, Git, PostgreSQL, and EFS utilities
-dnf install -y nodejs22 git postgresql17
+
+`dnf install -y nodejs22 git postgresql17`
 
 ### 3. Clone application from GitHub
+
+```bash
 cd /home/ec2-user
 git clone -b ec2-simple-website https://github.com/vietaws/architecting.git
 cd architecting
+```
 
 
 ### 4. Create app config file
+
+```bash
 cat > app_config.json <<EOF
 {
   "rds": {
@@ -210,14 +247,17 @@ cat > app_config.json <<EOF
   }
 }
 EOF
+```
 
 ### 5. Install dependencies
-npm install
+`npm install`
 
 ### 6. Set ownership
-chown -R ec2-user:ec2-user /home/ec2-user/architecting
+
+`chown -R ec2-user:ec2-user /home/ec2-user/architecting`
 
 ### 7. Create systemd service
+```bash
 cat > /etc/systemd/system/demo-app.service <<'EOFS'
 [Unit]
 Description=AWS Architecting Demo Application - Viet Tran
@@ -237,15 +277,20 @@ SyslogIdentifier=demo-app
 [Install]
 WantedBy=multi-user.target
 EOFS
+```
 
 ### 8. Enable and start service
+
+```bash
 systemctl daemon-reload
 systemctl enable demo-app
 systemctl start demo-app
 systemctl restart demo-app
+```
 
 ### 9. Check status
-systemctl status demo-app --no-pager
+
+`systemctl status demo-app --no-pager`
 
 ### 10. View application logs
 
