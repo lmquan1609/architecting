@@ -1,6 +1,6 @@
 CREATE DATABASE providers_db;
 
-\c providers_db
+\c providers
 
 CREATE TABLE providers (
   provider_id SERIAL PRIMARY KEY,

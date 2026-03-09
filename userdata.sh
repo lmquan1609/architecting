@@ -40,7 +40,7 @@ DB_HOST=10.0.147.111
 DB_PORT=5432
 DB_USER=dbadmin
 DB_PASSWORD=your_secure_password
-PORT=3000
+PORT=3001
 EOF
 
 # Install dependencies
@@ -71,3 +71,5 @@ chown -R ec2-user:ec2-user /home/ec2-user/app
 systemctl daemon-reload
 systemctl enable providers.service
 systemctl start providers.service
+systemctl restart providers.service
+journalctl -u product-app -f

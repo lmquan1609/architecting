@@ -25,14 +25,17 @@ app.get('/api/providers', async (req, res) => {
 });
 
 app.post('/api/providers', async (req, res) => {
-  const { provider_name, provider_city } = req.body;
+  const { provider_id, provider_name, provider_city } = req.body;
+  console.log('POST /api/providers:', { provider_id, provider_name, provider_city });
   try {
     const result = await pool.query(
-      'INSERT INTO providers (provider_name, provider_city) VALUES ($1, $2) RETURNING *',
-      [provider_name, provider_city]
+      'INSERT INTO providers (provider_id, provider_name, provider_city) VALUES ($1, $2, $3) RETURNING *',
+      [provider_id, provider_name, provider_city]
     );
+    console.log('Insert successful:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('Insert failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -47,4 +50,12 @@ app.delete('/api/providers/:id', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  try {
+    const result = await pool.query('SELECT NOW()');
+    console.log('Database connected:', result.rows[0]);
+  } catch (err) {
+    console.error('Database connection failed:', err.message);
+  }
+});
