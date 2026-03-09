@@ -3,37 +3,19 @@
 ## Architecture
 - **Application Tier**: Node.js on EC2 with Auto Scaling
 - **Load Balancer**: Application Load Balancer (ALB)
-- **Databases**: DynamoDB (products) + RDS PostgreSQL (providers)
-- **Storage**: S3 (product images)
+- **Database**: RDS PostgreSQL (providers)
 
 ## Setup Instructions
 
 ### 1. Prerequisites
 - EC2 instance with Node.js installed
-- IAM role attached to EC2 with policies:
-  - `AmazonDynamoDBFullAccess`
-  - `AmazonS3FullAccess`
 
 ### 2. Database Setup
-
-**DynamoDB Table:**
-```bash
-aws dynamodb create-table \
-  --table-name demo_table \
-  --attribute-definitions AttributeName=product_id,AttributeType=S \
-  --key-schema AttributeName=product_id,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST
-```
 
 **RDS PostgreSQL:**
 Connect to your RDS instance and run:
 ```bash
 psql -h db.viet.vn -U admin -d products_db -f setup.sql
-```
-
-**S3 Bucket:**
-```bash
-aws s3 mb s3://demo_product_images_bucket
 ```
 
 ### 3. Application Deployment
@@ -52,7 +34,6 @@ Access the web interface at: `http://<EC2-Public-IP>:3000`
 
 Create Launch Template with:
 - AMI with Node.js and application code
-- IAM role with DynamoDB and S3 permissions
 - User data script to start application
 
 Create Auto Scaling Group:
@@ -89,24 +70,12 @@ git clone <your-repo> || scp -r ./architecting ec2-user@<EC2-IP>:~
 cd architecting
 npm install
 
-# Start application (use PM2 for production)
-npm start
-
-# Or with PM2 for auto-restart
-sudo npm install -g pm2
-pm2 start server.js --name product-app
-pm2 startup
-pm2 save
+# Start application with systemd
+sudo systemctl start product-app
+sudo systemctl enable product-app
 ```
 
 ## API Endpoints
-
-**Products (DynamoDB):**
-- `POST /products` - Create product
-- `GET /products` - List all products
-- `GET /products/:id` - Get product by ID
-- `PUT /products/:id` - Update product
-- `DELETE /products/:id` - Delete product
 
 **Providers (RDS PostgreSQL):**
 - `POST /providers` - Create provider
@@ -118,7 +87,5 @@ pm2 save
 ## Configuration
 
 All connection parameters are in `app_config.json`:
-- DynamoDB region and table name
 - RDS PostgreSQL connection details
-- S3 bucket name and region
 - Server port

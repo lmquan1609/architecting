@@ -2,11 +2,6 @@
 set -e
 
 # Variables - UPDATE THESE
-EFS_ID="fs-0df1a5706ceb8608f"  # Your EFS File System ID
-MOUNT_POINT="/data/efs"
-AWS_REGION="us-east-1"
-DYNAMODB_TABLE="demo_table"
-S3_BUCKET="demo-product-images-123456"
 RDS_HOST="database-2.cluster-crkedvynyebh.us-east-1.rds.amazonaws.com"
 RDS_PORT="5432"
 RDS_DATABASE="providers_db"
@@ -17,20 +12,8 @@ PGPASSWORD=$RDS_PASSWORD
 # Update system
 dnf update -y
 
-# Install Node.js 22, Git, PostgreSQL, and EFS utilities
-dnf install -y nodejs22 git postgresql17 amazon-efs-utils
-
-# Setup EFS mount
-echo "Setting up EFS..."
-mkdir -p $MOUNT_POINT
-
-# nslookup $EFS_ID.efs.$AWS_REGION.amazonaws.com
-# mount -t efs -o tls fs-0df1a5706ceb8608f.efs.us-east-1.amazonaws.com:/ $MOUNT_POINT
-# mount -t efs -o tls fs-0df1a5706ceb8608f:/ efs
-
-echo "$EFS_ID.efs.$AWS_REGION.amazonaws.com:/ $MOUNT_POINT efs _netdev,tls,iam 0 0" >> /etc/fstab
-mount -a
-chmod 777 $MOUNT_POINT
+# Install Node.js 22, Git, and PostgreSQL
+dnf install -y nodejs22 git postgresql17
 
 # Clone application from GitHub
 cd /home/ec2-user
@@ -46,20 +29,12 @@ unset PGPASSWORD
 # Create config file
 cat > app_config.json <<EOF
 {
-  "dynamodb": {
-    "region": "${AWS_REGION}",
-    "tableName": "${DYNAMODB_TABLE}"
-  },
   "rds": {
     "host": "${RDS_HOST}",
     "port": ${RDS_PORT},
     "database": "${RDS_DATABASE}",
     "user": "${RDS_USER}",
     "password": "${RDS_PASSWORD}"
-  },
-  "s3": {
-    "region": "${AWS_REGION}",
-    "bucketName": "${S3_BUCKET}"
   },
   "server": {
     "port": 3000
