@@ -1,37 +1,37 @@
-# PART 1: INSTALL & CONFIGURE POSTGRESQL ON AMAZON EC2
+## PART 1: INSTALL & CONFIGURE POSTGRESQL ON AMAZON EC2
 
-## 1. Update system packages
+### 1. Update system packages
 bash
 `sudo dnf update -y`
 
 
-## 2. Install PostgreSQL
+### 2. Install PostgreSQL
 bash
 `sudo dnf install postgresql17-server -y`
 
 
-## 3. Initialize PostgreSQL database
+### 3. Initialize PostgreSQL database
 bash
 `sudo postgresql-setup --initdb`
 
 
-## 4. Start and enable PostgreSQL service
+### 4. Start and enable PostgreSQL service
 bash
 `sudo systemctl start postgresql`
 `sudo systemctl enable postgresql`
 
 
-## 5. Switch to postgres user
+### 5. Switch to postgres user
 bash
 `sudo -i -u postgres`
 
 
-## 6. Create the "demo" database
+### 6. Create the "demo" database
 bash
 `createdb demo`
 
 
-## 7. Verify the database was created
+### 7. Verify the database was created
 bash
 `psql -l`
 
