@@ -5,7 +5,6 @@ bash
 
 `sudo dnf update -y`
 
-
 ### 2. Install PostgreSQL
 bash
 
