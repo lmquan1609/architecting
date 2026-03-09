@@ -1,110 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product & Provider Management</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Providers Directory</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+      font-size: 2rem;
+    }
+    .form {
+      display: grid;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    input {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #5568d3; }
+    .providers {
+      display: grid;
+      gap: 15px;
+    }
+    .provider {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      transition: transform 0.2s;
+    }
+    .provider:hover { transform: translateY(-2px); }
+    .provider-info h3 { color: #333; margin-bottom: 5px; }
+    .provider-info p { color: #666; }
+    .delete-btn {
+      padding: 8px 16px;
+      background: #dc3545;
+      font-size: 0.9rem;
+    }
+    .delete-btn:hover { background: #c82333; }
+    @media (max-width: 600px) {
+      .container { padding: 20px; }
+      h1 { font-size: 1.5rem; }
+      .provider { flex-direction: column; gap: 10px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>AWS Architecting Demo</h1>
-            <!-- <span id="instance-id" style="color:orange;font-size:14px;margin-left:auto;">Loading...</span> -->
-            <nav>
-                <button class="tab active" data-tab="products">Products</button>
-                <button class="tab" data-tab="providers">Providers</button>
-                <button class="tab" data-tab="stress">Stress Test</button>
-                <button class="tab" data-tab="efs">EFS Images</button>
-            </nav>
-        </header>
-
-        <main id="products" class="tab-content active">
-            <div class="actions">
-                <button class="btn-primary" onclick="showProductForm()">+ Add Product</button>
-            </div>
-            
-            <div id="product-form" class="form-card hidden">
-                <h3>Add Product</h3>
-                <input type="text" id="product_id" placeholder="Product ID" required>
-                <input type="text" id="product_name" placeholder="Product Name" required>
-                <textarea id="description" placeholder="Description"></textarea>
-                <input type="file" id="image_file" accept="image/*">
-                <input type="number" id="price" placeholder="Price" step="0.01">
-                <input type="number" id="remaining_sku" placeholder="Stock Quantity">
-                <div class="form-actions">
-                    <button class="btn-primary" onclick="createProduct()">Save</button>
-                    <button class="btn-secondary" onclick="hideProductForm()">Cancel</button>
-                </div>
-            </div>
-
-            <div id="products-list" class="grid"></div>
-        </main>
-
-        <main id="providers" class="tab-content">
-            <div class="actions">
-                <button class="btn-primary" onclick="showProviderForm()">+ Add Provider</button>
-            </div>
-            
-            <div id="provider-form" class="form-card hidden">
-                <h3>Add Provider</h3>
-                <input type="text" id="provider_id" placeholder="Provider ID" required>
-                <input type="text" id="provider_name" placeholder="Provider Name" required>
-                <input type="text" id="provider_city" placeholder="City">
-                <div class="form-actions">
-                    <button class="btn-primary" onclick="createProvider()">Save</button>
-                    <button class="btn-secondary" onclick="hideProviderForm()">Cancel</button>
-                </div>
-            </div>
-
-            <div id="providers-list" class="list"></div>
-        </main>
-
-        <main id="stress" class="tab-content">
-            <div class="stress-container">
-                <h2>CPU Stress Test - Current Instance</h2>
-                <div class="stress-info">
-                    <p>Control stress test for this EC2 instance. CPU usage updates every 3 seconds.</p>
-                </div>
-                <div id="instances-table">
-                    <table class="stress-table">
-                        <thead>
-                            <tr>
-                                <th>Instance ID</th>
-                                <th>Status</th>
-                                <th>Workers</th>
-                                <th>CPU Usage</th>
-                                <th>CPU Cores</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="instances-tbody">
-                            <tr>
-                                <td colspan="6" style="text-align:center;">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-
-        <main id="efs" class="tab-content">
-            <div class="efs-container">
-                <h2>EFS Image Gallery</h2>
-                <div class="efs-upload">
-                    <input type="file" id="efs-file-input" accept="image/*" style="display:none;">
-                    <button class="btn-primary" onclick="document.getElementById('efs-file-input').click()">
-                        📤 Upload Image
-                    </button>
-                    <span id="upload-status" style="margin-left:15px;color:#666;"></span>
-                </div>
-                <div id="efs-images" class="efs-gallery">
-                    <p style="text-align:center;color:#999;">Loading images...</p>
-                </div>
-            </div>
-        </main>
+  <div class="container">
+    <h1>Providers Directory</h1>
+    <div class="form">
+      <input type="text" id="name" placeholder="Provider Name" required>
+      <input type="text" id="city" placeholder="Provider City" required>
+      <button onclick="addProvider()">Add Provider</button>
     </div>
+    <div class="providers" id="providers"></div>
+  </div>
 
-    <script src="app.js"></script>
+  <script>
+    async function loadProviders() {
+      const res = await fetch('/api/providers');
+      const providers = await res.json();
+      document.getElementById('providers').innerHTML = providers.map(p => `
+        <div class="provider">
+          <div class="provider-info">
+            <h3>${p.provider_name}</h3>
+            <p>${p.provider_city}</p>
+          </div>
+          <button class="delete-btn" onclick="deleteProvider(${p.provider_id})">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    async function addProvider() {
+      const name = document.getElementById('name').value;
+      const city = document.getElementById('city').value;
+      if (!name || !city) return;
+      await fetch('/api/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider_name: name, provider_city: city })
+      });
+      document.getElementById('name').value = '';
+      document.getElementById('city').value = '';
+      loadProviders();
+    }
+
+    async function deleteProvider(id) {
+      await fetch(`/api/providers/${id}`, { method: 'DELETE' });
+      loadProviders();
+    }
+
+    loadProviders();
+  </script>
 </body>
 </html>
