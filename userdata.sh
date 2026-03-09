@@ -72,4 +72,4 @@ systemctl daemon-reload
 systemctl enable providers.service
 systemctl start providers.service
 systemctl restart providers.service
-journalctl -u product-app -f
+journalctl -u providers -f
