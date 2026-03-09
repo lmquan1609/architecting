@@ -171,10 +171,6 @@ bash
 
 `psql -h localhost -U dbadmin -d demo`
 
-Example:
-
-`psql -h 10.0.147.111 -U dbadmin -d demo`
-
 Enter password: `demoPassword`
 
 
@@ -221,7 +217,18 @@ Login to EC2 via Session Manager
 
 `dnf install -y nodejs22 git postgresql17`
 
-### 3. Clone application from GitHub
+### 3. Test DB connection
+
+Example:
+
+`psql -h 10.0.147.111 -U dbadmin -d demo`
+
+Enter password: `demoPassword`
+
+Output:
+Cannot connect due to connection and security group did not open port 5432.
+
+### 4. Clone application from GitHub
 
 ```bash
 cd /home/ec2-user
@@ -230,7 +237,7 @@ cd architecting
 ```
 
 
-### 4. Create app config file
+### 5. Create app config file
 
 ```bash
 cat > app_config.json <<EOF
@@ -249,14 +256,14 @@ cat > app_config.json <<EOF
 EOF
 ```
 
-### 5. Install dependencies
+### 6. Install dependencies
 `npm install`
 
-### 6. Set ownership
+### 7. Set ownership
 
 `chown -R ec2-user:ec2-user /home/ec2-user/architecting`
 
-### 7. Create systemd service
+### 8. Create systemd service
 ```bash
 cat > /etc/systemd/system/demo-app.service <<'EOFS'
 [Unit]
@@ -279,7 +286,7 @@ WantedBy=multi-user.target
 EOFS
 ```
 
-### 8. Enable and start service
+### 9. Enable and start service
 
 ```bash
 systemctl daemon-reload
@@ -288,11 +295,11 @@ systemctl start demo-app
 systemctl restart demo-app
 ```
 
-### 9. Check status
+### 10. Check status
 
 `systemctl status demo-app --no-pager`
 
-### 10. View application logs
+### 11. View application logs
 
 ```bash
 # View logs in real-time:
