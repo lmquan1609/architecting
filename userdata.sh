@@ -31,7 +31,7 @@ systemctl restart postgresql
 
 # Deploy application
 cd /home/ec2-user
-git clone -b simple-system https://github.com/vietaws/architecting.git app || mkdir -p app
+git clone -b ec2-simple-website https://github.com/vietaws/architecting.git app || mkdir -p app
 cd app
 
 # Create .env file
