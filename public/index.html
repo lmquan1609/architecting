@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Providers Directory</title>
+  <title>AWS Demo Application</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -13,19 +13,46 @@
       padding: 20px;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       background: white;
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      padding: 40px;
+      overflow: hidden;
     }
     h1 {
       color: #333;
-      margin-bottom: 30px;
+      padding: 30px;
       text-align: center;
       font-size: 2rem;
+      background: #f8f9fa;
     }
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      background: #f8f9fa;
+    }
+    .tab {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .tab:hover { background: #e9ecef; }
+    .tab.active {
+      background: white;
+      border-bottom: 3px solid #667eea;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px;
+      display: none;
+    }
+    .content.active { display: block; }
     .form {
       display: grid;
       gap: 15px;
@@ -34,17 +61,13 @@
       background: #f8f9fa;
       border-radius: 8px;
     }
-    input {
+    input[type="text"], input[type="file"] {
       padding: 12px;
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       font-size: 1rem;
-      transition: border 0.3s;
     }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
+    input:focus { outline: none; border-color: #667eea; }
     button {
       padding: 12px 24px;
       background: #667eea;
@@ -56,53 +79,92 @@
       transition: background 0.3s;
     }
     button:hover { background: #5568d3; }
-    .providers {
-      display: grid;
-      gap: 15px;
-    }
-    .provider {
+    .items { display: grid; gap: 15px; }
+    .item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 20px;
       background: #f8f9fa;
       border-radius: 8px;
-      transition: transform 0.2s;
     }
-    .provider:hover { transform: translateY(-2px); }
-    .provider-info h3 { color: #333; margin-bottom: 5px; }
-    .provider-info p { color: #666; }
+    .item-info h3 { color: #333; margin-bottom: 5px; }
+    .item-info p { color: #666; font-size: 0.9rem; }
     .delete-btn {
       padding: 8px 16px;
       background: #dc3545;
       font-size: 0.9rem;
     }
     .delete-btn:hover { background: #c82333; }
+    .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+    .image-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .image-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+    .image-info {
+      padding: 10px;
+    }
+    .image-info p {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
     @media (max-width: 600px) {
-      .container { padding: 20px; }
-      h1 { font-size: 1.5rem; }
-      .provider { flex-direction: column; gap: 10px; }
+      .container { border-radius: 0; }
+      h1 { font-size: 1.5rem; padding: 20px; }
+      .content { padding: 20px; }
+      .images { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Providers Directory</h1>
-    <div class="form">
-      <input type="text" id="name" placeholder="Provider Name" required>
-      <input type="text" id="city" placeholder="Provider City" required>
-      <button onclick="addProvider()">Add Provider</button>
+    <h1>AWS Demo Application</h1>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('providers')">Providers</button>
+      <button class="tab" onclick="switchTab('images')">Image Upload</button>
     </div>
-    <div class="providers" id="providers"></div>
+
+    <div id="providers" class="content active">
+      <div class="form">
+        <input type="text" id="providerName" placeholder="Provider Name">
+        <input type="text" id="providerCity" placeholder="Provider City">
+        <button onclick="addProvider()">Add Provider</button>
+      </div>
+      <div class="items" id="providersList"></div>
+    </div>
+
+    <div id="images" class="content">
+      <div class="form">
+        <input type="file" id="imageFile" accept="image/*">
+        <button onclick="uploadImage()">Upload Image</button>
+      </div>
+      <div class="images" id="imagesList"></div>
+    </div>
   </div>
 
   <script>
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+      if (tab === 'providers') loadProviders();
+      if (tab === 'images') loadImages();
+    }
+
     async function loadProviders() {
       const res = await fetch('/api/providers');
       const providers = await res.json();
-      document.getElementById('providers').innerHTML = providers.map(p => `
-        <div class="provider">
-          <div class="provider-info">
+      document.getElementById('providersList').innerHTML = providers.map(p => `
+        <div class="item">
+          <div class="item-info">
             <h3>${p.provider_name}</h3>
             <p>${p.provider_city}</p>
           </div>
@@ -112,23 +174,52 @@
     }
 
     async function addProvider() {
-      const name = document.getElementById('name').value;
-      const city = document.getElementById('city').value;
-      if (!name || !city) return;
-      const provider_id = Date.now();
+      const name = document.getElementById('providerName').value;
+      const city = document.getElementById('providerCity').value;
+      if (!name || !city) return alert('Please fill all fields');
       await fetch('/api/providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider_id, provider_name: name, provider_city: city })
+        body: JSON.stringify({ provider_id: Date.now(), provider_name: name, provider_city: city })
       });
-      document.getElementById('name').value = '';
-      document.getElementById('city').value = '';
+      document.getElementById('providerName').value = '';
+      document.getElementById('providerCity').value = '';
       loadProviders();
     }
 
     async function deleteProvider(id) {
       await fetch(`/api/providers/${id}`, { method: 'DELETE' });
       loadProviders();
+    }
+
+    async function loadImages() {
+      const res = await fetch('/api/images');
+      const images = await res.json();
+      document.getElementById('imagesList').innerHTML = images.map(img => `
+        <div class="image-card">
+          <img src="${img.url}" alt="${img.name}">
+          <div class="image-info">
+            <p><strong>${img.name}</strong></p>
+            <p>${(img.size / 1024).toFixed(1)} KB</p>
+            <button class="delete-btn" onclick="deleteImage('${img.name}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function uploadImage() {
+      const file = document.getElementById('imageFile').files[0];
+      if (!file) return alert('Please select an image');
+      const formData = new FormData();
+      formData.append('image', file);
+      await fetch('/api/images', { method: 'POST', body: formData });
+      document.getElementById('imageFile').value = '';
+      loadImages();
+    }
+
+    async function deleteImage(name) {
+      await fetch(`/api/images/${name}`, { method: 'DELETE' });
+      loadImages();
     }
 
     loadProviders();

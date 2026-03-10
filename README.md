@@ -228,6 +228,14 @@ Login to EC2 via Session Manager
 
 `dnf install -y nodejs22 git postgresql17`
 
+### 3. Create upload directory on EBS volume
+
+```bash
+mkdir -p /var/images
+chown ec2-user:ec2-user /var/images
+chmod 755 /var/images
+```
+
 ### 3. Test DB connection
 
 Example:
@@ -257,6 +265,7 @@ DB_PORT=5432
 DB_USER=dbadmin
 DB_PASSWORD=demoPassword
 PORT=3001
+UPLOAD_DIR=/var/images
 EOF
 ```
 
