@@ -278,6 +278,7 @@ After=network.target
 Type=simple
 User=ec2-user
 WorkingDirectory=/home/ec2-user/architecting
+EnvironmentFile=/home/ec2-user/app/.env
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
