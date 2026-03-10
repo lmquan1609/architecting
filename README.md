@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS providers (
 ### 11. Test Insert/Select/Delete test records (Optional)
 
 ```sql
-INSERT INTO demo (provider_id, provider_name, provider_city) VALUES
+INSERT INTO providers (provider_id, provider_name, provider_city) VALUES
   ('111', 'Tech Solutions Inc', 'San Francisco'),
   ('222', 'Global Services Ltd', 'New York'),
   ('333', 'Innovation Partners', 'Austin');
