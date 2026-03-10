@@ -243,27 +243,20 @@ Cannot connect due to connection and security group did not open port 5432.
 
 ```bash
 cd /home/ec2-user
-git clone -b ec2-simple-website https://github.com/vietaws/architecting.git
+git clone -b lab01-ec2-simple-website https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
 
-### 5. Create app config file
+### 5. Create .env file
 
 ```bash
-cat > app_config.json <<EOF
-{
-  "rds": {
-    "host": "10.0.147.111",
-    "port": "5432",
-    "database": "demo",
-    "user": "dbadmin",
-    "password": "demoPassword"
-  },
-  "server": {
-    "port": 3000
-  }
-}
+cat > .env <<EOF
+DB_HOST=10.0.147.111
+DB_PORT=5432
+DB_USER=dbadmin
+DB_PASSWORD=demoPassword
+PORT=3001
 EOF
 ```
 
