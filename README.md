@@ -3,7 +3,7 @@
 ### 0. Launch Amazon EC2 on private subnet
 
 - Name: `demo-db`
-- Type: `t4.small`
+- Type: `t4g.small`
 - Subnet: `db-subnet`
 - Security group: `db-sg`
 - IAM Instance Profile: `ec2-instance-role`
