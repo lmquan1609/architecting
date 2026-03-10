@@ -1,5 +1,13 @@
 ## PART 1: INSTALL & CONFIGURE POSTGRESQL ON AMAZON EC2
 
+### 0. Launch Amazon EC2 on private subnet
+
+- Name: `demo-db`
+- Type: `t4.small`
+- Subnet: `db-subnet`
+- Security group: `db-sg`
+- IAM Instance Profile: `ec2-instance-role`
+
 ### 1. Update system packages
 bash
 
