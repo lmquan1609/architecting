@@ -125,11 +125,10 @@ bash
 
 ### 8. Configure authentication
 
-Edit the `pg_hba.conf` file:
+Edit the `pg_hba.conf` and `postgresql` file:
 
 bash
-
-`sudo vi /var/lib/pgsql/data/pg_hba.conf`
+`sudo vi /var/lib/pgsql/data/postgresql.conf`
 
 
 Find and change:
@@ -141,6 +140,10 @@ To:
 
 `listen_addresses = '*'`
 
+
+bash
+
+`sudo vi /var/lib/pgsql/data/pg_hba.conf`
 
 Add this line before other rules (for local connections):
 
