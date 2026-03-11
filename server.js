@@ -21,9 +21,21 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.get('/api/metadata', async (req, res) => {
   try {
+    const token = await fetch('http://169.254.169.254/latest/api/token', {
+      method: 'PUT',
+      headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' },
+      signal: AbortSignal.timeout(2000)
+    }).then(r => r.text());
+
     const [region, instanceId] = await Promise.all([
-      fetch('http://169.254.169.254/latest/meta-data/placement/region', { signal: AbortSignal.timeout(2000) }).then(r => r.text()),
-      fetch('http://169.254.169.254/latest/meta-data/instance-id', { signal: AbortSignal.timeout(2000) }).then(r => r.text())
+      fetch('http://169.254.169.254/latest/meta-data/placement/region', {
+        headers: { 'X-aws-ec2-metadata-token': token },
+        signal: AbortSignal.timeout(2000)
+      }).then(r => r.text()),
+      fetch('http://169.254.169.254/latest/meta-data/instance-id', {
+        headers: { 'X-aws-ec2-metadata-token': token },
+        signal: AbortSignal.timeout(2000)
+      }).then(r => r.text())
     ]);
     res.json({ region, instanceId });
   } catch (err) {
