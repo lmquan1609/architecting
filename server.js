@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/ebs';
+const UPLOAD_DIR = process.env.UPLOAD_DIR || '/mnt/efs';
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({

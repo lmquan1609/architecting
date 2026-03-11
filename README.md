@@ -1,56 +1,77 @@
-# Image Upload Application - EBS Storage
+# Image Upload Application - EFS Storage
 
-Simple image upload application that stores files on EC2 EBS volume and displays AWS metadata.
+Simple image upload application that stores files on Amazon EFS and displays AWS metadata.
 
 ## Features
-- Upload images to EBS volume (`/data/ebs`)
+- Upload images to Amazon EFS (`/mnt/efs`)
 - Display AWS region and instance ID
 - View uploaded images in grid layout
 - Delete images
+- Shared storage across multiple EC2 instances
+
+## Prerequisites
+- Amazon EFS file system created in same VPC
+- Security group allowing NFS traffic (port 2049) from EC2 to EFS
+- EC2 instances in same subnets as EFS mount targets
 
 ## Deployment Instructions
 
-### 1. Update system and install Node.js
+### 1. Update system and install dependencies
 
 ```bash
 sudo -i
 dnf update -y
-dnf install -y nodejs22 git
+dnf install -y nodejs22 git amazon-efs-utils
 ```
 
-### 2. Create EBS upload directory
+### 2. Mount EFS file system
+
+Replace `fs-xxxxxxxxx` with your EFS ID:
 
 ```bash
-mkdir -p /data/ebs
-chown ec2-user:ec2-user /data/ebs
-chmod 755 /data/ebs
+EFS_ID=fs-xxxxxxxxx
+mkdir -p /mnt/efs
+mount -t efs -o tls ${EFS_ID}:/ /mnt/efs
 ```
 
-### 3. Clone application
+### 3. Add to /etc/fstab for persistent mount
+
+```bash
+echo "${EFS_ID}:/ /mnt/efs efs _netdev,tls 0 0" >> /etc/fstab
+```
+
+### 4. Set permissions
+
+```bash
+chown ec2-user:ec2-user /mnt/efs
+chmod 755 /mnt/efs
+```
+
+### 5. Clone application
 
 ```bash
 cd /home/ec2-user
-git clone -b lab02-ebs-image-uploader https://github.com/vietaws/architecting.git
+git clone -b lab05-efs-image-uploader https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
-### 4. Create .env file
+### 6. Create .env file
 
 ```bash
 cat > .env <<EOF
 PORT=3001
-UPLOAD_DIR=/data/ebs
+UPLOAD_DIR=/mnt/efs
 EOF
 ```
 
-### 5. Install dependencies
+### 7. Install dependencies
 
 ```bash
 npm install
 chown -R ec2-user:ec2-user /home/ec2-user/architecting
 ```
 
-### 6. Create systemd service
+### 8. Create systemd service
 
 ```bash
 cat > /etc/systemd/system/demo-app.service <<'EOFS'
@@ -75,7 +96,7 @@ WantedBy=multi-user.target
 EOFS
 ```
 
-### 7. Enable and start service
+### 9. Enable and start service
 
 ```bash
 systemctl daemon-reload
@@ -84,7 +105,7 @@ systemctl start demo-app
 systemctl status demo-app --no-pager
 ```
 
-### 8. View logs
+### 10. View logs
 
 ```bash
 # Real-time logs
@@ -92,6 +113,13 @@ journalctl -u demo-app -f
 
 # Recent logs
 journalctl -u demo-app -n 50
+```
+
+## Verify EFS Mount
+
+```bash
+df -h | grep efs
+ls -la /mnt/efs
 ```
 
 ## API Endpoints
@@ -105,12 +133,19 @@ journalctl -u demo-app -n 50
 ## Environment Variables
 
 - `PORT` - Server port (default: 3000)
-- `UPLOAD_DIR` - Image storage directory (default: /data/ebs)
+- `UPLOAD_DIR` - Image storage directory (default: /mnt/efs)
 
 ## Testing
 
 1. Access application via browser: `http://<instance-ip>:3001`
 2. Upload an image
 3. Verify region and instance ID are displayed
-4. Check images are stored in `/data/ebs`
+4. Check images are stored in `/mnt/efs`
 5. Test delete functionality
+6. Upload from one EC2 instance and verify visibility from another instance
+
+## EFS Benefits
+- Shared storage across multiple EC2 instances
+- Automatic scaling
+- High availability and durability
+- No capacity planning required

@@ -1,20 +1,21 @@
 # Application Summary
 
-## Single Purpose: Image Upload to EBS
+## Single Purpose: Image Upload to EFS
 
-This application provides a simple interface to upload images to an EC2 EBS volume and displays AWS metadata.
+This application provides a simple interface to upload images to Amazon EFS and displays AWS metadata.
 
 ## Features
-1. **Image Upload** - Upload images to `/data/ebs` directory
+1. **Image Upload** - Upload images to `/mnt/efs` directory (EFS mount point)
 2. **AWS Metadata Display** - Shows region name and instance ID
 3. **Image Gallery** - Grid view of all uploaded images
-4. **Delete Function** - Remove images from EBS storage
+4. **Delete Function** - Remove images from EFS storage
+5. **Shared Storage** - Images accessible across multiple EC2 instances
 
 ## Tech Stack
 - **Backend**: Express.js with Multer for file uploads
 - **Frontend**: Vanilla JavaScript with responsive design
-- **Storage**: EBS volume mounted at `/data/ebs`
-- **Metadata**: EC2 instance metadata service
+- **Storage**: Amazon EFS (Elastic File System)
+- **Metadata**: EC2 instance metadata service (IMDSv2)
 
 ## Quick Deploy
 
@@ -22,22 +23,25 @@ This application provides a simple interface to upload images to an EC2 EBS volu
 # As root
 sudo -i
 dnf update -y
-dnf install -y nodejs22 git
+dnf install -y nodejs22 git amazon-efs-utils
 
-# Create upload directory
-mkdir -p /data/ebs
-chown ec2-user:ec2-user /data/ebs
+# Mount EFS (replace with your EFS ID)
+EFS_ID=fs-xxxxxxxxx
+mkdir -p /mnt/efs
+mount -t efs -o tls ${EFS_ID}:/ /mnt/efs
+echo "${EFS_ID}:/ /mnt/efs efs _netdev,tls 0 0" >> /etc/fstab
+chown ec2-user:ec2-user /mnt/efs
 
 # Clone and setup
 cd /home/ec2-user
-git clone -b lab01-ec2-simple-website https://github.com/vietaws/architecting.git
+git clone -b lab03-ec2-efs https://github.com/vietaws/architecting.git
 cd architecting
 npm install
 
 # Create .env
 cat > .env <<EOF
 PORT=3001
-UPLOAD_DIR=/data/ebs
+UPLOAD_DIR=/mnt/efs
 EOF
 
 # Setup systemd service (see README.md for full service file)
@@ -57,5 +61,13 @@ architecting/
 │   └── index.html      # Frontend UI
 ├── package.json        # Dependencies
 ├── .env.example        # Environment template
+├── userdata.sh         # EC2 user data script
 └── README.md           # Full documentation
 ```
+
+## EFS Benefits
+- Shared storage across multiple EC2 instances
+- Automatic scaling
+- High availability and durability
+- No capacity planning required
+
