@@ -30,7 +30,7 @@ chmod 755 /data/ebs
 
 ```bash
 cd /home/ec2-user
-git clone -b lab02-ec2-ebs https://github.com/vietaws/architecting.git
+git clone -b lab02-ebs-image-uploader https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
