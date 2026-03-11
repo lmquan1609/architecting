@@ -3,10 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 
-const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
@@ -25,8 +22,8 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 app.get('/api/metadata', async (req, res) => {
   try {
     const [region, instanceId] = await Promise.all([
-      execAsync('curl -s http://169.254.169.254/latest/meta-data/placement/region').then(r => r.stdout.trim()),
-      execAsync('curl -s http://169.254.169.254/latest/meta-data/instance-id').then(r => r.stdout.trim())
+      fetch('http://169.254.169.254/latest/meta-data/placement/region', { signal: AbortSignal.timeout(2000) }).then(r => r.text()),
+      fetch('http://169.254.169.254/latest/meta-data/instance-id', { signal: AbortSignal.timeout(2000) }).then(r => r.text())
     ]);
     res.json({ region, instanceId });
   } catch (err) {
