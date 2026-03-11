@@ -1,23 +1,22 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const execAsync = promisify(exec);
 const app = express();
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || '/mnt/efs';
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const BUCKET_NAME = process.env.S3_BUCKET || 'architecting-demo-xxx';
+const s3Client = new S3Client({});
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use(express.static('public'));
-app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.get('/api/metadata', async (req, res) => {
   try {
@@ -43,29 +42,56 @@ app.get('/api/metadata', async (req, res) => {
   }
 });
 
-app.get('/api/images', (req, res) => {
+app.get('/api/images', async (req, res) => {
   try {
-    const files = fs.readdirSync(UPLOAD_DIR)
-      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f))
-      .map(f => {
-        const stats = fs.statSync(path.join(UPLOAD_DIR, f));
-        return { name: f, size: stats.size, uploaded: stats.mtime, url: `/uploads/${f}` };
-      })
-      .sort((a, b) => b.uploaded - a.uploaded);
-    res.json(files);
+    const command = new ListObjectsV2Command({ Bucket: BUCKET_NAME });
+    const data = await s3Client.send(command);
+    
+    const images = await Promise.all(
+      (data.Contents || [])
+        .filter(obj => /\.(jpg|jpeg|png|gif|webp)$/i.test(obj.Key))
+        .map(async obj => {
+          const url = await getSignedUrl(s3Client, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: obj.Key }), { expiresIn: 3600 });
+          return {
+            name: obj.Key,
+            size: obj.Size,
+            uploaded: obj.LastModified,
+            url
+          };
+        })
+    );
+    
+    res.json(images.sort((a, b) => b.uploaded - a.uploaded));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/images', upload.single('image'), (req, res) => {
+app.post('/api/images', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  res.json({ name: req.file.filename, size: req.file.size, url: `/uploads/${req.file.filename}` });
+  
+  try {
+    const key = `${Date.now()}-${req.file.originalname}`;
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype
+    });
+    
+    await s3Client.send(command);
+    const url = await getSignedUrl(s3Client, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }), { expiresIn: 3600 });
+    
+    res.json({ name: key, size: req.file.size, url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.delete('/api/images/:name', (req, res) => {
+app.delete('/api/images/:name', async (req, res) => {
   try {
-    fs.unlinkSync(path.join(UPLOAD_DIR, req.params.name));
+    const command = new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: req.params.name });
+    await s3Client.send(command);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -75,5 +101,5 @@ app.delete('/api/images/:name', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Upload directory: ${UPLOAD_DIR}`);
+  console.log(`S3 Bucket: ${BUCKET_NAME}`);
 });

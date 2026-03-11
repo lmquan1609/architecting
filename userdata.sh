@@ -1,31 +1,19 @@
 #!/bin/bash
 set -e
 
-# Update system and install dependencies
+# Update system and install Node.js
 dnf update -y
-dnf install -y nodejs22 git amazon-efs-utils
-
-# Mount EFS file system (replace with your EFS ID)
-EFS_ID=fs-04ffb1e04ec0b8138
-mkdir -p /mnt/efs
-mount -t efs -o tls ${EFS_ID}:/ /mnt/efs
-
-# Add to fstab for persistent mount
-echo "${EFS_ID}:/ /mnt/efs efs _netdev,tls 0 0" >> /etc/fstab
-
-# Set permissions
-chown ec2-user:ec2-user /mnt/efs
-chmod 755 /mnt/efs
+dnf install -y nodejs22 git
 
 # Clone application
 cd /home/ec2-user
-git clone -b lab05-efs-image-uploader https://github.com/vietaws/architecting.git
+git clone -b lab06-s3-image-uploader https://github.com/vietaws/architecting.git
 cd architecting
 
-# Create .env file
+# Create .env file (replace with your S3 bucket name)
 cat > .env <<EOF
 PORT=3001
-UPLOAD_DIR=/mnt/efs
+S3_BUCKET=architecting-demo-xxx
 EOF
 
 # Install dependencies
