@@ -14,6 +14,7 @@ cd architecting
 cat > .env <<EOF
 PORT=3001
 S3_BUCKET=architecting-demo-xxx
+AWS_REGION=ap-southeast-1
 EOF
 
 # Install dependencies

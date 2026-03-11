@@ -37,12 +37,13 @@ cd architecting
 
 ### 3. Create .env file
 
-Replace `architecting-demo-xxx` with your S3 bucket name:
+Replace `architecting-demo-xxx` with your S3 bucket name and set your AWS region:
 
 ```bash
 cat > .env <<EOF
 PORT=3001
 S3_BUCKET=architecting-demo-xxx
+AWS_REGION=ap-southeast-1
 EOF
 ```
 
@@ -133,7 +134,8 @@ Attach this policy to your EC2 instance role:
 ## Environment Variables
 
 - `PORT` - Server port (default: 3000)
-- `S3_BUCKET` - S3 bucket name (default: architecting-demo-xxx)
+- `S3_BUCKET` - S3 bucket name (required)
+- `AWS_REGION` - AWS region (default: us-east-1)
 
 ## Testing
 

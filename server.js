@@ -2,14 +2,11 @@ import express from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 
-const execAsync = promisify(exec);
 const app = express();
 
 const BUCKET_NAME = process.env.S3_BUCKET || 'architecting-demo-xxx';
-const s3Client = new S3Client({});
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -44,6 +41,7 @@ app.get('/api/metadata', async (req, res) => {
 
 app.get('/api/images', async (req, res) => {
   try {
+    console.log(`Listing S3 bucket: ${BUCKET_NAME}`);
     const command = new ListObjectsV2Command({ Bucket: BUCKET_NAME });
     const data = await s3Client.send(command);
     
@@ -63,6 +61,7 @@ app.get('/api/images', async (req, res) => {
     
     res.json(images.sort((a, b) => b.uploaded - a.uploaded));
   } catch (err) {
+    console.error('S3 List Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -79,11 +78,15 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
       ContentType: req.file.mimetype
     });
     
+    console.log(`Uploading to S3: ${BUCKET_NAME}/${key}`);
     await s3Client.send(command);
+    console.log('Upload successful');
+    
     const url = await getSignedUrl(s3Client, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }), { expiresIn: 3600 });
     
     res.json({ name: key, size: req.file.size, url });
   } catch (err) {
+    console.error('S3 Upload Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -102,4 +105,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`S3 Bucket: ${BUCKET_NAME}`);
+  console.log(`AWS Region: ${process.env.AWS_REGION || 'us-east-1'}`);
 });
