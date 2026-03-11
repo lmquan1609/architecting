@@ -1,75 +1,53 @@
 #!/bin/bash
 set -e
 
-# Install Node.js and PostgreSQL 17
-dnf install -y nodejs postgresql17 postgresql17-server git
+# Update system and install Node.js
+dnf update -y
+dnf install -y nodejs22 git
 
-# Initialize PostgreSQL
-postgresql-setup --initdb
-systemctl enable postgresql
-systemctl start postgresql
+# Create EBS upload directory
+mkdir -p /data/ebs
+chown ec2-user:ec2-user /data/ebs
+chmod 755 /data/ebs
 
-# Setup PostgreSQL user and database
-sudo -u postgres psql <<EOF
-CREATE DATABASE providers_db;
-\c providers_db
-CREATE TABLE providers (
-  provider_id SERIAL PRIMARY KEY,
-  provider_name VARCHAR(255) NOT NULL,
-  provider_city VARCHAR(255) NOT NULL
-);
-INSERT INTO providers (provider_name, provider_city) VALUES
-  ('Tech Solutions Inc', 'San Francisco'),
-  ('Global Services Ltd', 'New York'),
-  ('Innovation Partners', 'Austin');
-ALTER USER postgres WITH PASSWORD 'postgres';
-EOF
-
-# Configure PostgreSQL to allow local connections
-echo "host all all 127.0.0.1/32 md5" >> /var/lib/pgsql/data/pg_hba.conf
-systemctl restart postgresql
-
-# Deploy application
+# Clone application
 cd /home/ec2-user
-git clone -b ec2-simple-website https://github.com/vietaws/architecting.git app || mkdir -p app
-cd app
+git clone -b lab02-ec2-ebs https://github.com/vietaws/architecting.git
+cd architecting
 
 # Create .env file
 cat > .env <<EOF
-DB_HOST=10.0.147.111
-DB_PORT=5432
-DB_USER=dbadmin
-DB_PASSWORD=your_secure_password
 PORT=3001
+UPLOAD_DIR=/data/ebs
 EOF
 
 # Install dependencies
 npm install
+chown -R ec2-user:ec2-user /home/ec2-user/architecting
 
 # Create systemd service
-cat > /etc/systemd/system/providers.service <<EOF
+cat > /etc/systemd/system/demo-app.service <<'EOFS'
 [Unit]
-Description=Providers Directory App
-After=network.target postgresql.service
+Description=Image Upload Application
+After=network.target
 
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/app
-EnvironmentFile=/home/ec2-user/app/.env
+WorkingDirectory=/home/ec2-user/architecting
+EnvironmentFile=/home/ec2-user/architecting/.env
 ExecStart=/usr/bin/node server.js
 Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=demo-app
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOFS
 
-# Set permissions
-chown -R ec2-user:ec2-user /home/ec2-user/app
-
-# Start service
+# Enable and start service
 systemctl daemon-reload
-systemctl enable providers.service
-systemctl start providers.service
-systemctl restart providers.service
-journalctl -u providers -f
+systemctl enable demo-app
+systemctl start demo-app
