@@ -1,14 +1,8 @@
 {
-  "name": "image-upload-app",
+  "name": "image-upload-s3-direct",
   "version": "1.0.0",
-  "type": "module",
+  "description": "Static website on S3 with direct browser upload using AWS SDK and Cognito",
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "@aws-sdk/client-s3": "^3.515.0",
-    "@aws-sdk/s3-request-presigner": "^3.515.0"
+    "deploy": "./deploy.sh"
   }
 }

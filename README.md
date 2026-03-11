@@ -1,108 +1,123 @@
-# Image Upload Application - S3 Storage
+# Image Upload Application - S3 Direct Upload
 
-Simple image upload application that stores files on Amazon S3 and displays AWS metadata.
+Static website hosted on S3 that uses AWS SDK in the browser to upload images directly to S3 using Cognito Identity Pool for authentication.
 
-## Features
-- Upload images to Amazon S3 bucket
-- Display AWS region and instance ID
-- View uploaded images in grid layout
-- Delete images from S3
-- Presigned URLs for secure image access
+## Architecture
+- **Frontend**: Static HTML/CSS/JS hosted on S3 (root of bucket)
+- **Authentication**: Cognito Identity Pool (unauthenticated access)
+- **Storage**: S3 bucket with `data/` prefix for uploaded images
+- **SDK**: AWS SDK v3 loaded from CDN
 
 ## Prerequisites
-- Amazon S3 bucket created (e.g., `architecting-demo-xxx`)
-- EC2 instance with IAM role that has S3 permissions:
-  - `s3:PutObject`
-  - `s3:GetObject`
-  - `s3:ListBucket`
-  - `s3:DeleteObject`
+- S3 bucket (e.g., `architecting-demo-xxx`)
+- Cognito Identity Pool with unauthenticated access enabled
+- S3 bucket configured for static website hosting
+- CORS configuration on S3 bucket
 
 ## Deployment Instructions
 
-### 1. Update system and install Node.js
+### 1. Create S3 Bucket
 
 ```bash
-sudo -i
-dnf update -y
-dnf install -y nodejs22 git
+BUCKET_NAME=architecting-demo-xxx
+REGION=ap-southeast-1
+
+aws s3 mb s3://${BUCKET_NAME} --region ${REGION}
 ```
 
-### 2. Clone application
+### 2. Enable Static Website Hosting
 
 ```bash
-cd /home/ec2-user
-git clone -b lab04-ec2-s3 https://github.com/vietaws/architecting.git
-cd architecting
+aws s3 website s3://${BUCKET_NAME} \
+  --index-document index.html \
+  --error-document index.html
 ```
 
-### 3. Create .env file
-
-Replace `architecting-demo-xxx` with your S3 bucket name and set your AWS region:
+### 3. Set Bucket Policy for Public Read
 
 ```bash
-cat > .env <<EOF
-PORT=3001
-S3_BUCKET=architecting-demo-xxx
-AWS_REGION=ap-southeast-1
+cat > bucket-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::${BUCKET_NAME}/*"
+    }
+  ]
+}
 EOF
+
+aws s3api put-bucket-policy --bucket ${BUCKET_NAME} --policy file://bucket-policy.json
 ```
 
-### 4. Install dependencies
+### 4. Configure CORS
 
 ```bash
-npm install
-chown -R ec2-user:ec2-user /home/ec2-user/architecting
+cat > cors.json <<EOF
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
+EOF
+
+aws s3api put-bucket-cors --bucket ${BUCKET_NAME} --cors-configuration file://cors.json
 ```
 
-### 5. Create systemd service
+### 5. Create Cognito Identity Pool
 
 ```bash
-cat > /etc/systemd/system/demo-app.service <<'EOFS'
-[Unit]
-Description=Image Upload Application
-After=network.target
+IDENTITY_POOL_ID=$(aws cognito-identity create-identity-pool \
+  --identity-pool-name image-upload-pool \
+  --allow-unauthenticated-identities \
+  --region ${REGION} \
+  --query 'IdentityPoolId' --output text)
 
-[Service]
-Type=simple
-User=ec2-user
-WorkingDirectory=/home/ec2-user/architecting
-EnvironmentFile=/home/ec2-user/architecting/.env
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=demo-app
-
-[Install]
-WantedBy=multi-user.target
-EOFS
+echo "Identity Pool ID: ${IDENTITY_POOL_ID}"
 ```
 
-### 6. Enable and start service
+### 6. Create IAM Role for Unauthenticated Users
 
 ```bash
-systemctl daemon-reload
-systemctl enable demo-app
-systemctl start demo-app
-systemctl status demo-app --no-pager
-```
+cat > trust-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "cognito-identity.amazonaws.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "cognito-identity.amazonaws.com:aud": "${IDENTITY_POOL_ID}"
+        },
+        "ForAnyValue:StringLike": {
+          "cognito-identity.amazonaws.com:amr": "unauthenticated"
+        }
+      }
+    }
+  ]
+}
+EOF
 
-### 7. View logs
+ROLE_ARN=$(aws iam create-role \
+  --role-name CognitoS3UnauthRole \
+  --assume-role-policy-document file://trust-policy.json \
+  --query 'Role.Arn' --output text)
 
-```bash
-# Real-time logs
-journalctl -u demo-app -f
-
-# Recent logs
-journalctl -u demo-app -n 50
-```
-
-## IAM Role Policy
-
-Attach this policy to your EC2 instance role:
-
-```json
+cat > role-policy.json <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -113,42 +128,95 @@ Attach this policy to your EC2 instance role:
         "s3:GetObject",
         "s3:DeleteObject"
       ],
-      "Resource": "arn:aws:s3:::architecting-demo-xxx/*"
+      "Resource": "arn:aws:s3:::${BUCKET_NAME}/data/*"
     },
     {
       "Effect": "Allow",
       "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::architecting-demo-xxx"
+      "Resource": "arn:aws:s3:::${BUCKET_NAME}",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": "data/*"
+        }
+      }
     }
   ]
 }
+EOF
+
+aws iam put-role-policy \
+  --role-name CognitoS3UnauthRole \
+  --policy-name S3Access \
+  --policy-document file://role-policy.json
 ```
 
-## API Endpoints
+### 7. Attach Role to Identity Pool
 
-- `GET /api/metadata` - Get AWS region and instance ID
-- `GET /api/images` - List all uploaded images with presigned URLs
-- `POST /api/images` - Upload image (multipart/form-data, max 10MB)
-- `DELETE /api/images/:name` - Delete image from S3
+```bash
+aws cognito-identity set-identity-pool-roles \
+  --identity-pool-id ${IDENTITY_POOL_ID} \
+  --roles unauthenticated=${ROLE_ARN} \
+  --region ${REGION}
+```
 
-## Environment Variables
+### 8. Update Frontend Configuration
 
-- `PORT` - Server port (default: 3000)
-- `S3_BUCKET` - S3 bucket name (required)
-- `AWS_REGION` - AWS region (default: us-east-1)
+Edit `public/index.html` and replace:
+- `REGION` with your AWS region
+- `BUCKET_NAME` with your bucket name
+- `IDENTITY_POOL_ID` with your Cognito Identity Pool ID
+
+```bash
+sed -i "s|REGION|${REGION}|g" public/index.html
+sed -i "s|BUCKET_NAME|${BUCKET_NAME}|g" public/index.html
+sed -i "s|IDENTITY_POOL_ID|${IDENTITY_POOL_ID}|g" public/index.html
+```
+
+### 9. Deploy Frontend to S3
+
+```bash
+aws s3 cp public/index.html s3://${BUCKET_NAME}/index.html \
+  --content-type "text/html" \
+  --cache-control "max-age=300"
+```
+
+### 10. Access Website
+
+```bash
+echo "Website URL: http://${BUCKET_NAME}.s3-website-${REGION}.amazonaws.com"
+```
+
+## S3 Bucket Structure
+
+```
+s3://architecting-demo-xxx/
+├── index.html              # Frontend
+└── data/                   # Uploaded images
+    ├── 1234567890-image1.jpg
+    └── 1234567891-image2.png
+```
+
+## How It Works
+
+1. Frontend loads AWS SDK v3 from CDN (jsDelivr)
+2. Uses Cognito Identity Pool for temporary credentials
+3. Browser directly uploads to S3 using `PutObjectCommand`
+4. Lists images using `ListObjectsV2Command`
+5. Deletes images using `DeleteObjectCommand`
+6. No backend servers required
 
 ## Testing
 
-1. Access application via browser: `http://<instance-ip>:3001`
-2. Upload an image
-3. Verify region and instance ID are displayed
-4. Check images are stored in S3 bucket
+1. Access website: `http://bucket-name.s3-website-region.amazonaws.com`
+2. Upload an image (goes directly to S3)
+3. Verify image appears in gallery
+4. Check S3 bucket for `data/` prefix
 5. Test delete functionality
-6. Verify presigned URLs expire after 1 hour
 
-## S3 Benefits
-- Scalable object storage
-- High durability (99.999999999%)
-- No capacity planning required
-- Presigned URLs for secure access
-- Can be accessed from multiple EC2 instances
+## Benefits
+- Fully serverless (no Lambda or API Gateway)
+- Direct browser-to-S3 upload
+- No backend infrastructure
+- Pay only for S3 storage and requests
+- Cognito handles authentication
+- AWS SDK handles all S3 operations

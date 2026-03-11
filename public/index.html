@@ -60,6 +60,7 @@
       transition: background 0.3s;
     }
     button:hover { background: #5568d3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
     .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
     .image-card {
       background: #f8f9fa;
@@ -87,6 +88,7 @@
       font-size: 0.9rem;
     }
     .delete-btn:hover { background: #c82333; }
+    .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 6px; margin-bottom: 15px; }
     @media (max-width: 600px) {
       .container { border-radius: 0; }
       .header { padding: 20px; }
@@ -102,58 +104,116 @@
     <div class="header">
       <h1>Image Upload - S3 Storage</h1>
       <div class="metadata">
-        <span>Region: <strong id="region">Loading...</strong></span>
-        <span>Instance: <strong id="instanceId">Loading...</strong></span>
+        <span>Region: <strong id="region">REGION</strong></span>
+        <span>Bucket: <strong id="bucket">BUCKET_NAME</strong></span>
       </div>
     </div>
     <div class="content">
+      <div id="error" class="error" style="display:none;"></div>
       <div class="form">
         <input type="file" id="imageFile" accept="image/*">
-        <button onclick="uploadImage()">Upload to S3</button>
+        <button id="uploadBtn" onclick="uploadImage()">Upload to S3</button>
       </div>
       <div class="images" id="imagesList"></div>
     </div>
   </div>
 
-  <script>
-    async function loadMetadata() {
-      const res = await fetch('/api/metadata');
-      const data = await res.json();
-      document.getElementById('region').textContent = data.region;
-      document.getElementById('instanceId').textContent = data.instanceId;
+  <script type="module">
+    import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-s3@3.515.0/+esm';
+    import { fromCognitoIdentityPool } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.515.0/+esm';
+
+    const REGION = 'REGION';
+    const BUCKET_NAME = 'BUCKET_NAME';
+    const IDENTITY_POOL_ID = 'IDENTITY_POOL_ID';
+
+    const s3Client = new S3Client({
+      region: REGION,
+      credentials: fromCognitoIdentityPool({
+        clientConfig: { region: REGION },
+        identityPoolId: IDENTITY_POOL_ID
+      })
+    });
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = msg;
+      errorDiv.style.display = 'block';
+      setTimeout(() => errorDiv.style.display = 'none', 5000);
     }
+
+    document.getElementById('region').textContent = REGION;
+    document.getElementById('bucket').textContent = BUCKET_NAME;
 
     async function loadImages() {
-      const res = await fetch('/api/images');
-      const images = await res.json();
-      document.getElementById('imagesList').innerHTML = images.map(img => `
-        <div class="image-card">
-          <img src="${img.url}" alt="${img.name}">
-          <div class="image-info">
-            <p><strong>${img.name}</strong></p>
-            <p>${(img.size / 1024).toFixed(1)} KB</p>
-            <button class="delete-btn" onclick="deleteImage('${img.name}')">Delete</button>
+      try {
+        const command = new ListObjectsV2Command({ Bucket: BUCKET_NAME, Prefix: 'data/' });
+        const data = await s3Client.send(command);
+        
+        const images = (data.Contents || [])
+          .filter(obj => obj.Key !== 'data/' && /\.(jpg|jpeg|png|gif|webp)$/i.test(obj.Key))
+          .map(obj => ({
+            name: obj.Key,
+            size: obj.Size,
+            uploaded: obj.LastModified,
+            url: `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${obj.Key}`
+          }))
+          .sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+
+        document.getElementById('imagesList').innerHTML = images.map(img => `
+          <div class="image-card">
+            <img src="${img.url}" alt="${img.name}">
+            <div class="image-info">
+              <p><strong>${img.name.replace('data/', '')}</strong></p>
+              <p>${(img.size / 1024).toFixed(1)} KB</p>
+              <button class="delete-btn" onclick="deleteImage('${img.name}')">Delete</button>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      } catch (err) {
+        showError('Failed to load images: ' + err.message);
+      }
     }
 
-    async function uploadImage() {
+    window.uploadImage = async function() {
       const file = document.getElementById('imageFile').files[0];
-      if (!file) return alert('Please select an image');
-      const formData = new FormData();
-      formData.append('image', file);
-      await fetch('/api/images', { method: 'POST', body: formData });
-      document.getElementById('imageFile').value = '';
-      loadImages();
-    }
+      if (!file) return showError('Please select an image');
+      
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
+      
+      try {
+        const key = `data/${Date.now()}-${file.name}`;
+        const command = new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+          Body: file,
+          ContentType: file.type
+        });
+        
+        await s3Client.send(command);
+        document.getElementById('imageFile').value = '';
+        loadImages();
+      } catch (err) {
+        showError('Upload failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload to S3';
+      }
+    };
 
-    async function deleteImage(name) {
-      await fetch(`/api/images/${name}`, { method: 'DELETE' });
-      loadImages();
-    }
+    window.deleteImage = async function(key) {
+      if (!confirm('Delete this image?')) return;
+      
+      try {
+        const command = new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key });
+        await s3Client.send(command);
+        loadImages();
+      } catch (err) {
+        showError('Delete failed: ' + err.message);
+      }
+    };
 
-    loadMetadata();
     loadImages();
   </script>
 </body>
