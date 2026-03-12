@@ -1,14 +1,10 @@
-CREATE DATABASE providers_db;
-
-\c providers
-
-CREATE TABLE providers (
-  provider_id SERIAL PRIMARY KEY,
-  provider_name VARCHAR(255) NOT NULL,
-  provider_city VARCHAR(255) NOT NULL
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  qty INTEGER NOT NULL DEFAULT 0
 );
 
-INSERT INTO providers (provider_name, provider_city) VALUES
-  ('Tech Solutions Inc', 'San Francisco'),
-  ('Global Services Ltd', 'New York'),
-  ('Innovation Partners', 'Austin');
+INSERT INTO products (name, qty) VALUES
+  ('Laptop', 15),
+  ('Mouse', 50),
+  ('Keyboard', 30);
