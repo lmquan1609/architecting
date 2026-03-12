@@ -9,7 +9,10 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432,
   database: 'demo',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres'
+  password: process.env.DB_PASSWORD || 'postgres',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 app.use(express.json());

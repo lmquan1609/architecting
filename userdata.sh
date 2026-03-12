@@ -24,7 +24,7 @@ EOF
 
 # Initialize database with init.sql
 export PGPASSWORD=${RDS_PASSWORD}
-psql -h ${RDS_ENDPOINT} -U dbadmin -d demo -f init.sql
+psql "host=${RDS_ENDPOINT} port=5432 dbname=demo user=dbadmin sslmode=require" -f init.sql
 unset PGPASSWORD
 
 # Install dependencies
