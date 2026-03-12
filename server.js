@@ -21,24 +21,36 @@ app.use(express.static('public'));
 // Get AWS metadata
 app.get('/api/metadata', async (req, res) => {
   try {
-    const token = await fetch('http://169.254.169.254/latest/api/token', {
+    // Get IMDSv2 token
+    const tokenResponse = await fetch('http://169.254.169.254/latest/api/token', {
       method: 'PUT',
-      headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' },
-      signal: AbortSignal.timeout(2000)
-    }).then(r => r.text());
+      headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' }
+    });
+    
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to get token');
+    }
+    
+    const token = await tokenResponse.text();
+    console.log('IMDSv2 token obtained');
 
-    const [region, instanceId] = await Promise.all([
+    // Get region and instance ID
+    const [regionResponse, instanceIdResponse] = await Promise.all([
       fetch('http://169.254.169.254/latest/meta-data/placement/region', {
-        headers: { 'X-aws-ec2-metadata-token': token },
-        signal: AbortSignal.timeout(2000)
-      }).then(r => r.text()),
+        headers: { 'X-aws-ec2-metadata-token': token }
+      }),
       fetch('http://169.254.169.254/latest/meta-data/instance-id', {
-        headers: { 'X-aws-ec2-metadata-token': token },
-        signal: AbortSignal.timeout(2000)
-      }).then(r => r.text())
+        headers: { 'X-aws-ec2-metadata-token': token }
+      })
     ]);
+
+    const region = await regionResponse.text();
+    const instanceId = await instanceIdResponse.text();
+    
+    console.log('Metadata:', { region, instanceId });
     res.json({ region, instanceId });
   } catch (err) {
+    console.error('Metadata error:', err.message);
     res.json({ region: 'N/A', instanceId: 'N/A' });
   }
 });
