@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventory Management</title>
+  <title>CRM Application</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -13,7 +13,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
       background: white;
       border-radius: 16px;
@@ -25,11 +25,7 @@
       padding: 30px;
       text-align: center;
     }
-    h1 {
-      color: #333;
-      font-size: 2rem;
-      margin-bottom: 15px;
-    }
+    h1 { color: #333; font-size: 2rem; margin-bottom: 15px; }
     .metadata {
       display: flex;
       gap: 20px;
@@ -45,12 +41,7 @@
       justify-content: center;
       align-items: center;
     }
-    .stress-control input {
-      width: 80px;
-      padding: 6px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-    }
+    .stress-control input { width: 80px; padding: 6px; border: 2px solid #e0e0e0; border-radius: 6px; }
     .stress-btn {
       padding: 6px 16px;
       background: #ff6b6b;
@@ -63,7 +54,32 @@
     .stress-btn:hover { background: #ee5a52; }
     .stop-btn { background: #28a745; }
     .stop-btn:hover { background: #218838; }
-    .content { padding: 40px; }
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      background: #f8f9fa;
+    }
+    .tab {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .tab:hover { background: #e9ecef; }
+    .tab.active {
+      background: white;
+      border-bottom: 3px solid #667eea;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px;
+      display: none;
+    }
+    .content.active { display: block; }
     .form {
       display: grid;
       gap: 15px;
@@ -72,17 +88,15 @@
       background: #f8f9fa;
       border-radius: 8px;
     }
-    input {
+    input, textarea {
       padding: 12px;
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       font-size: 1rem;
-      transition: border 0.3s;
+      font-family: inherit;
     }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
+    input:focus, textarea:focus { outline: none; border-color: #667eea; }
+    textarea { resize: vertical; min-height: 80px; }
     button {
       padding: 12px 24px;
       background: #667eea;
@@ -94,25 +108,30 @@
       transition: background 0.3s;
     }
     button:hover { background: #5568d3; }
-    .products {
-      display: grid;
-      gap: 15px;
-    }
-    .product {
+    .items { display: grid; gap: 15px; }
+    .item {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      gap: 20px;
       padding: 20px;
       background: #f8f9fa;
       border-radius: 8px;
       transition: transform 0.2s;
     }
-    .product:hover { transform: translateY(-2px); }
-    .product-info h3 { color: #333; margin-bottom: 5px; }
-    .product-info p { color: #666; }
+    .item:hover { transform: translateY(-2px); }
+    .item-image {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #e0e0e0;
+    }
+    .item-info { flex: 1; }
+    .item-info h3 { color: #333; margin-bottom: 5px; }
+    .item-info p { color: #666; margin-bottom: 3px; font-size: 0.9rem; }
     .actions {
       display: flex;
       gap: 10px;
+      align-items: center;
     }
     .edit-btn {
       padding: 8px 16px;
@@ -126,13 +145,13 @@
       font-size: 0.9rem;
     }
     .delete-btn:hover { background: #c82333; }
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
       .container { border-radius: 0; }
       .header { padding: 20px; }
       h1 { font-size: 1.5rem; }
       .metadata { flex-direction: column; gap: 10px; }
       .content { padding: 20px; }
-      .product { flex-direction: column; gap: 10px; }
+      .item { flex-direction: column; }
       .actions { width: 100%; }
     }
   </style>
@@ -140,7 +159,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Inventory Management</h1>
+      <h1>CRM Application</h1>
       <div class="metadata">
         <span>Region: <strong id="region">Loading...</strong></span>
         <span>Instance: <strong id="instanceId">Loading...</strong></span>
@@ -152,19 +171,48 @@
         <button class="stress-btn stop-btn" onclick="stopStress()">Stop</button>
       </div>
     </div>
-    <div class="content">
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('products')">Products</button>
+      <button class="tab" onclick="switchTab('customers')">Customers</button>
+    </div>
+
+    <div id="products" class="content active">
       <div class="form">
-        <input type="text" id="name" placeholder="Product Name" required>
-        <input type="number" id="qty" placeholder="Quantity" required min="0">
-        <button id="submitBtn" onclick="addProduct()">Add Product</button>
+        <input type="text" id="productName" placeholder="Product Name" required>
+        <input type="number" id="productQty" placeholder="Quantity" required min="0">
+        <input type="file" id="productImage" accept="image/*">
+        <button id="productSubmitBtn" onclick="saveProduct()">Add Product</button>
       </div>
-      <div class="products" id="products"></div>
+      <div class="items" id="productsList"></div>
+    </div>
+
+    <div id="customers" class="content">
+      <div class="form">
+        <input type="text" id="customerName" placeholder="Customer Name" required>
+        <input type="text" id="customerLocation" placeholder="Location">
+        <input type="date" id="customerDob" placeholder="Date of Birth">
+        <textarea id="customerDescription" placeholder="Description"></textarea>
+        <input type="file" id="customerAvatar" accept="image/*">
+        <button id="customerSubmitBtn" onclick="saveCustomer()">Add Customer</button>
+      </div>
+      <div class="items" id="customersList"></div>
     </div>
   </div>
 
   <script>
-    let editingId = null;
+    let editingProductId = null;
+    let editingCustomerId = null;
     let stressRunning = false;
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+      if (tab === 'products') loadProducts();
+      if (tab === 'customers') loadCustomers();
+    }
 
     async function loadMetadata() {
       try {
@@ -185,25 +233,20 @@
       if (stressRunning) {
         startBtn.disabled = true;
         startBtn.style.opacity = '0.5';
-        startBtn.style.cursor = 'not-allowed';
         stopBtn.disabled = false;
         stopBtn.style.opacity = '1';
-        stopBtn.style.cursor = 'pointer';
         durationInput.disabled = true;
       } else {
         startBtn.disabled = false;
         startBtn.style.opacity = '1';
-        startBtn.style.cursor = 'pointer';
         stopBtn.disabled = true;
         stopBtn.style.opacity = '0.5';
-        stopBtn.style.cursor = 'not-allowed';
         durationInput.disabled = false;
       }
     }
 
     async function startStress() {
       if (stressRunning) return;
-      
       const duration = document.getElementById('stressDuration').value;
       try {
         const res = await fetch('/api/stress', {
@@ -212,19 +255,14 @@
           body: JSON.stringify({ duration: parseInt(duration) })
         });
         const data = await res.json();
-        
         if (data.status === 'started') {
           stressRunning = true;
           updateStressButtons();
           alert(`CPU stress started for ${duration} seconds`);
-          
-          // Auto-disable after duration
           setTimeout(() => {
             stressRunning = false;
             updateStressButtons();
           }, duration * 1000);
-        } else {
-          alert('CPU stress already running');
         }
       } catch (err) {
         alert('Failed to start stress test');
@@ -233,72 +271,136 @@
 
     async function stopStress() {
       if (!stressRunning) return;
-      
       try {
         const res = await fetch('/api/stress', { method: 'DELETE' });
-        const data = await res.json();
         stressRunning = false;
         updateStressButtons();
-        alert(`CPU stress ${data.status}`);
+        alert('CPU stress stopped');
       } catch (err) {
         alert('Failed to stop stress test');
       }
     }
 
+    // PRODUCTS
     async function loadProducts() {
       const res = await fetch('/api/products');
       const products = await res.json();
-      document.getElementById('products').innerHTML = products.map(p => `
-        <div class="product">
-          <div class="product-info">
+      document.getElementById('productsList').innerHTML = products.map(p => `
+        <div class="item">
+          ${p.image_url ? `<img src="${p.image_url}" class="item-image" alt="${p.name}">` : '<div class="item-image"></div>'}
+          <div class="item-info">
             <h3>${p.name}</h3>
             <p>Quantity: ${p.qty}</p>
           </div>
           <div class="actions">
-            <button class="edit-btn" onclick="editProduct(${p.id}, '${p.name}', ${p.qty})">Edit</button>
+            <button class="edit-btn" onclick='editProduct(${JSON.stringify(p)})'>Edit</button>
             <button class="delete-btn" onclick="deleteProduct(${p.id})">Delete</button>
           </div>
         </div>
       `).join('');
     }
 
-    async function addProduct() {
-      const name = document.getElementById('name').value;
-      const qty = document.getElementById('qty').value;
-      if (!name || !qty) return alert('Please fill all fields');
+    async function saveProduct() {
+      const name = document.getElementById('productName').value;
+      const qty = document.getElementById('productQty').value;
+      const image = document.getElementById('productImage').files[0];
+      if (!name || !qty) return alert('Please fill required fields');
 
-      if (editingId) {
-        await fetch(`/api/products/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, qty: parseInt(qty) })
-        });
-        editingId = null;
-        document.getElementById('submitBtn').textContent = 'Add Product';
-      } else {
-        await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, qty: parseInt(qty) })
-        });
-      }
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('qty', qty);
+      if (image) formData.append('image', image);
 
-      document.getElementById('name').value = '';
-      document.getElementById('qty').value = '';
+      const url = editingProductId ? `/api/products/${editingProductId}` : '/api/products';
+      const method = editingProductId ? 'PUT' : 'POST';
+
+      await fetch(url, { method, body: formData });
+
+      document.getElementById('productName').value = '';
+      document.getElementById('productQty').value = '';
+      document.getElementById('productImage').value = '';
+      document.getElementById('productSubmitBtn').textContent = 'Add Product';
+      editingProductId = null;
       loadProducts();
     }
 
-    function editProduct(id, name, qty) {
-      editingId = id;
-      document.getElementById('name').value = name;
-      document.getElementById('qty').value = qty;
-      document.getElementById('submitBtn').textContent = 'Update Product';
+    function editProduct(product) {
+      editingProductId = product.id;
+      document.getElementById('productName').value = product.name;
+      document.getElementById('productQty').value = product.qty;
+      document.getElementById('productSubmitBtn').textContent = 'Update Product';
     }
 
     async function deleteProduct(id) {
       if (!confirm('Delete this product?')) return;
       await fetch(`/api/products/${id}`, { method: 'DELETE' });
       loadProducts();
+    }
+
+    // CUSTOMERS
+    async function loadCustomers() {
+      const res = await fetch('/api/customers');
+      const customers = await res.json();
+      document.getElementById('customersList').innerHTML = customers.map(c => `
+        <div class="item">
+          ${c.avatar ? `<img src="${c.avatar}" class="item-image" alt="${c.name}">` : '<div class="item-image"></div>'}
+          <div class="item-info">
+            <h3>${c.name}</h3>
+            <p>Location: ${c.location || 'N/A'}</p>
+            <p>DOB: ${c.dob || 'N/A'}</p>
+            <p>${c.description || ''}</p>
+          </div>
+          <div class="actions">
+            <button class="edit-btn" onclick='editCustomer(${JSON.stringify(c)})'>Edit</button>
+            <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveCustomer() {
+      const name = document.getElementById('customerName').value;
+      const location = document.getElementById('customerLocation').value;
+      const dob = document.getElementById('customerDob').value;
+      const description = document.getElementById('customerDescription').value;
+      const avatar = document.getElementById('customerAvatar').files[0];
+      if (!name) return alert('Please enter customer name');
+
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('location', location);
+      formData.append('dob', dob);
+      formData.append('description', description);
+      if (avatar) formData.append('avatar', avatar);
+
+      const url = editingCustomerId ? `/api/customers/${editingCustomerId}` : '/api/customers';
+      const method = editingCustomerId ? 'PUT' : 'POST';
+
+      await fetch(url, { method, body: formData });
+
+      document.getElementById('customerName').value = '';
+      document.getElementById('customerLocation').value = '';
+      document.getElementById('customerDob').value = '';
+      document.getElementById('customerDescription').value = '';
+      document.getElementById('customerAvatar').value = '';
+      document.getElementById('customerSubmitBtn').textContent = 'Add Customer';
+      editingCustomerId = null;
+      loadCustomers();
+    }
+
+    function editCustomer(customer) {
+      editingCustomerId = customer.id;
+      document.getElementById('customerName').value = customer.name;
+      document.getElementById('customerLocation').value = customer.location || '';
+      document.getElementById('customerDob').value = customer.dob || '';
+      document.getElementById('customerDescription').value = customer.description || '';
+      document.getElementById('customerSubmitBtn').textContent = 'Update Customer';
+    }
+
+    async function deleteCustomer(id) {
+      if (!confirm('Delete this customer?')) return;
+      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      loadCustomers();
     }
 
     loadMetadata();

@@ -1,123 +1,124 @@
-# Inventory Management Application
+# CRM Application - AWS Integration Guide
 
-Simple inventory management system built with Node.js, Express, and Amazon RDS PostgreSQL.
+Complete CRM system with Products (RDS + S3) and Customers (DynamoDB + EFS).
 
-## Features
-- Add new products with name and quantity
-- Edit existing products
-- Delete products
-- View all products in inventory
-- Responsive design
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        EC2 Instance                          │
+│                     (Node.js Application)                    │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │   Products   │  │  Customers   │  │  Metadata    │     │
+│  │   Module     │  │   Module     │  │   & Stress   │     │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘     │
+└─────────┼──────────────────┼────────────────────────────────┘
+          │                  │
+          ▼                  ▼
+    ┌─────────┐        ┌──────────┐
+    │   RDS   │        │ DynamoDB │
+    │  (SQL)  │        │  (NoSQL) │
+    └─────────┘        └──────────┘
+          │                  │
+          ▼                  ▼
+    ┌─────────┐        ┌──────────┐
+    │   S3    │        │   EFS    │
+    │ (Images)│        │(Avatars) │
+    └─────────┘        └──────────┘
+```
 
 ## Prerequisites
-- Amazon RDS PostgreSQL instance (pre-created)
-- Amazon EC2 instance (application server)
-- Node.js 22
-- RDS connection details
 
-## RDS Database Setup
-
-### 1. Create RDS PostgreSQL Instance
-
+### 1. RDS PostgreSQL Instance
 - Engine: PostgreSQL 17
-- Instance class: `db.t4g.micro` or `db.t4g.small`
-- Database name: `demo`
-- Master username: `dbadmin`
-- Master password: `demoPassword`
-- VPC: Same as application EC2
-- Subnet group: Private subnets
-- Security group: Allow port 5432 from application security group
-- Public access: No
+- Instance: db.t4g.micro or db.t4g.small
+- Database: `demo`
+- Security Group: Allow port 5432 from EC2
 
-### 2. Create Products Table
+### 2. S3 Bucket
+- Name: `crm-demo-bucket` (or your choice)
+- Region: Same as EC2
+- CORS enabled for image uploads
 
-Connect to RDS using psql or any PostgreSQL client:
+### 3. DynamoDB Table
+- Name: `customers`
+- Partition Key: `id` (String)
+- Billing: On-demand
 
-```bash
-psql -h <rds-endpoint> -U dbadmin -d demo
-```
+### 4. EFS File System
+- Performance mode: General Purpose
+- Throughput mode: Bursting
+- Mount targets in same subnets as EC2
 
-Run the following SQL:
+### 5. Secrets Manager
+- Secret name: `rds-credentials`
+- Format: `{"host":"...","username":"...","password":"..."}`
 
-```sql
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  qty INTEGER NOT NULL DEFAULT 0
-);
+## Quick Setup
 
-INSERT INTO products (name, qty) VALUES
-  ('Laptop', 15),
-  ('Mouse', 50),
-  ('Keyboard', 30);
-```
-
-Or use the provided `init.sql` file:
+### Step 1: Create AWS Resources
 
 ```bash
-psql -h <rds-endpoint> -U dbadmin -d demo -f init.sql
+# Set environment variables
+export AWS_REGION=us-east-1
+export S3_BUCKET=crm-demo-bucket
+export DYNAMODB_TABLE=customers
+export EFS_ID=fs-xxxxxxxxx
+export DB_SECRET_NAME=rds-credentials
+
+# Run setup script
+sudo ./setup-aws.sh
 ```
 
-## Application Deployment
-
-### 1. Launch Application EC2 Instance
-
-- Name: `demo-app`
-- Type: `t4g.small`
-- Subnet: Public or private subnet
-- Security group: Allow port 3001 and outbound to RDS port 5432
-- IAM Instance Profile: `ec2-instance-role`
-
-### 2. Install Dependencies
+### Step 2: Create RDS Secret
 
 ```bash
+aws secretsmanager create-secret \
+  --name rds-credentials \
+  --secret-string '{"host":"demo-db.xxxxx.rds.amazonaws.com","username":"dbadmin","password":"YourPassword"}' \
+  --region us-east-1
+```
+
+### Step 3: Deploy Application
+
+```bash
+# Install dependencies
 sudo dnf update -y
-sudo dnf install -y nodejs22 git postgresql17
-```
+sudo dnf install -y nodejs22 git postgresql17 amazon-efs-utils
 
-### 3. Clone Application
-
-```bash
+# Clone application
 cd /home/ec2-user
-git clone -b lab10-auto-scaling https://github.com/vietaws/architecting.git
+git clone -b main https://github.com/vietaws/architecting.git
 cd architecting
-```
 
-### 4. Create Environment File
-
-```bash
+# Create .env file
 cat > .env <<EOF
-DB_HOST=<rds-endpoint>
+DB_SECRET_NAME=rds-credentials
+DB_HOST=demo-db.xxxxx.rds.amazonaws.com
 DB_PORT=5432
 DB_USER=dbadmin
-DB_PASSWORD=demoPassword
+DB_PASSWORD=fallback-password
+S3_BUCKET=crm-demo-bucket
+DYNAMODB_TABLE=customers
+EFS_PATH=/mnt/efs
+AWS_REGION=us-east-1
 PORT=3001
 EOF
-```
 
-Replace:
-- `<rds-endpoint>` with your RDS endpoint (e.g., `demo-db.xxxxx.ap-southeast-1.rds.amazonaws.com`)
-- `<your-password>` with your RDS master password
+# Initialize RDS database
+export PGPASSWORD=YourPassword
+psql "host=demo-db.xxxxx.rds.amazonaws.com port=5432 dbname=demo user=dbadmin sslmode=require" -f init.sql
+unset PGPASSWORD
 
-### 5. Install Node Modules
-
-```bash
+# Install Node modules
 npm install
 sudo chown -R ec2-user:ec2-user /home/ec2-user/architecting
-```
 
-### 6. Test Database Connection
-
-```bash
-psql -h <rds-endpoint> -U dbadmin -d demo
-```
-
-### 7. Create Systemd Service
-
-```bash
-sudo cat > /etc/systemd/system/demo-app.service <<'EOF'
+# Create systemd service
+sudo cat > /etc/systemd/system/crm-app.service <<'EOFS'
 [Unit]
-Description=Inventory Management Application
+Description=CRM Application
 After=network.target
 
 [Service]
@@ -130,91 +131,198 @@ Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=demo-app
+SyslogIdentifier=crm-app
 
 [Install]
 WantedBy=multi-user.target
-EOF
-```
+EOFS
 
-### 8. Start Application
-
-```bash
+# Start application
 sudo systemctl daemon-reload
-sudo systemctl enable demo-app
-sudo systemctl start demo-app
-sudo systemctl status demo-app
+sudo systemctl enable crm-app
+sudo systemctl start crm-app
+sudo systemctl status crm-app
 ```
 
-### 9. View Logs
+## IAM Permissions Required
 
-```bash
-# Real-time logs
-sudo journalctl -u demo-app -f
+EC2 instance role needs these permissions:
 
-# Recent logs
-sudo journalctl -u demo-app -n 50
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::crm-demo-bucket/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:*:*:table/customers"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:rds-credentials-*"
+    }
+  ]
+}
 ```
-
-## Automated Deployment with User Data
-
-Use the provided `userdata.sh` script when launching EC2 instances. Make sure to update the RDS endpoint in the script before use.
 
 ## API Endpoints
 
+### Products (RDS + S3)
 - `GET /api/products` - List all products
-- `POST /api/products` - Create product
-  - Body: `{ "name": "Product Name", "qty": 10 }`
+- `POST /api/products` - Create product with image
+  - Form data: `name`, `qty`, `image` (file)
 - `PUT /api/products/:id` - Update product
-  - Body: `{ "name": "Updated Name", "qty": 20 }`
-- `DELETE /api/products/:id` - Delete product
+  - Form data: `name`, `qty`, `image` (file, optional)
+- `DELETE /api/products/:id` - Delete product and image
 
-## Environment Variables
+### Customers (DynamoDB + EFS)
+- `GET /api/customers` - List all customers
+- `POST /api/customers` - Create customer with avatar
+  - Form data: `name`, `location`, `dob`, `description`, `avatar` (file)
+- `PUT /api/customers/:id` - Update customer
+  - Form data: `name`, `location`, `dob`, `description`, `avatar` (file, optional)
+- `DELETE /api/customers/:id` - Delete customer
 
-- `DB_HOST` - RDS endpoint (e.g., `demo-db.xxxxx.ap-southeast-1.rds.amazonaws.com`)
-- `DB_PORT` - Database port (default: 5432)
-- `DB_USER` - Database username (default: dbadmin)
-- `DB_PASSWORD` - Database password
-- `PORT` - Application port (default: 3000)
+### System
+- `GET /api/metadata` - Get EC2 region and instance ID
+- `POST /api/stress` - Start CPU stress test
+  - Body: `{ "duration": 60 }`
+- `DELETE /api/stress` - Stop CPU stress test
 
-## Database Schema
+## Database Schemas
 
+### Products (PostgreSQL)
 ```sql
 CREATE TABLE products (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
+  image_url VARCHAR(500),
   qty INTEGER NOT NULL DEFAULT 0
 );
 ```
 
+### Customers (DynamoDB)
+```json
+{
+  "id": "string (timestamp)",
+  "name": "string",
+  "avatar": "string (path)",
+  "location": "string",
+  "dob": "string (date)",
+  "description": "string"
+}
+```
+
+## Storage Structure
+
+### S3 Bucket
+```
+s3://crm-demo-bucket/
+└── products/
+    ├── 1234567890-laptop.jpg
+    └── 1234567891-mouse.png
+```
+
+### EFS Mount
+```
+/mnt/efs/
+├── 1234567890-avatar1.jpg
+└── 1234567891-avatar2.png
+```
+
 ## Testing
 
-1. Access application: `http://<ec2-public-ip>:3001`
-2. Add a new product
-3. Edit product quantity
-4. Delete a product
-5. Verify changes persist in RDS database
+1. Access application: `http://<ec2-ip>:3001`
+2. **Products Tab**:
+   - Add product with image → Stored in S3
+   - Edit product → Update RDS + S3
+   - Delete product → Remove from RDS + S3
+3. **Customers Tab**:
+   - Add customer with avatar → Stored in EFS
+   - Edit customer → Update DynamoDB + EFS
+   - Delete customer → Remove from DynamoDB
+4. **Metadata**: Verify region and instance ID display
+5. **Stress Test**: Click "Start CPU Stress" and monitor CloudWatch
 
 ## Troubleshooting
 
 ### Cannot connect to RDS
-- Check RDS security group allows port 5432 from EC2 security group
-- Verify RDS endpoint in .env file
-- Ensure EC2 and RDS are in the same VPC
-- Test connection: `psql -h <rds-endpoint> -U dbadmin -d demo`
+```bash
+# Test connection
+psql "host=your-rds-endpoint port=5432 dbname=demo user=dbadmin sslmode=require"
 
-### Application not starting
-- Check logs: `sudo journalctl -u demo-app -n 50`
-- Verify .env file exists with correct RDS endpoint
-- Check Node.js is installed: `node --version`
+# Check security group allows port 5432
+# Verify Secrets Manager secret exists
+aws secretsmanager get-secret-value --secret-id rds-credentials
+```
 
-### Port already in use
-- Change PORT in .env file
-- Update security group rules
+### S3 upload fails
+```bash
+# Check IAM permissions
+# Verify bucket exists
+aws s3 ls s3://crm-demo-bucket
 
-## RDS Benefits
-- Automated backups
-- Multi-AZ deployment for high availability
-- Automatic software patching
-- Scalable storage
-- Read replicas for read-heavy workloads
+# Check CORS configuration
+aws s3api get-bucket-cors --bucket crm-demo-bucket
+```
+
+### DynamoDB errors
+```bash
+# Verify table exists
+aws dynamodb describe-table --table-name customers
+
+# Check IAM permissions
+```
+
+### EFS mount issues
+```bash
+# Check mount
+df -h | grep efs
+
+# Remount if needed
+sudo mount -t efs -o tls fs-xxxxxxxxx:/ /mnt/efs
+
+# Check permissions
+ls -la /mnt/efs
+```
+
+### Application logs
+```bash
+sudo journalctl -u crm-app -f
+sudo journalctl -u crm-app -n 100
+```
+
+## Security Best Practices
+
+1. ✅ RDS credentials in Secrets Manager
+2. ✅ SSL/TLS for RDS connections
+3. ✅ S3 presigned URLs for secure image access
+4. ✅ EFS encryption in transit
+5. ✅ IAM roles instead of access keys
+6. ✅ Security groups restrict access
+7. ✅ File upload size limits (10MB)
+
+## Cost Optimization
+
+- Use RDS db.t4g.micro for development
+- Enable S3 lifecycle policies for old images
+- Use DynamoDB on-demand billing
+- EFS Infrequent Access for old avatars
+- Stop EC2 instances when not in use
