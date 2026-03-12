@@ -164,6 +164,7 @@
 
   <script>
     let editingId = null;
+    let stressRunning = false;
 
     async function loadMetadata() {
       try {
@@ -176,7 +177,33 @@
       }
     }
 
+    function updateStressButtons() {
+      const startBtn = document.querySelector('.stress-btn:not(.stop-btn)');
+      const stopBtn = document.querySelector('.stop-btn');
+      const durationInput = document.getElementById('stressDuration');
+      
+      if (stressRunning) {
+        startBtn.disabled = true;
+        startBtn.style.opacity = '0.5';
+        startBtn.style.cursor = 'not-allowed';
+        stopBtn.disabled = false;
+        stopBtn.style.opacity = '1';
+        stopBtn.style.cursor = 'pointer';
+        durationInput.disabled = true;
+      } else {
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+        startBtn.style.cursor = 'pointer';
+        stopBtn.disabled = true;
+        stopBtn.style.opacity = '0.5';
+        stopBtn.style.cursor = 'not-allowed';
+        durationInput.disabled = false;
+      }
+    }
+
     async function startStress() {
+      if (stressRunning) return;
+      
       const duration = document.getElementById('stressDuration').value;
       try {
         const res = await fetch('/api/stress', {
@@ -185,16 +212,33 @@
           body: JSON.stringify({ duration: parseInt(duration) })
         });
         const data = await res.json();
-        alert(`CPU stress ${data.status} for ${duration} seconds`);
+        
+        if (data.status === 'started') {
+          stressRunning = true;
+          updateStressButtons();
+          alert(`CPU stress started for ${duration} seconds`);
+          
+          // Auto-disable after duration
+          setTimeout(() => {
+            stressRunning = false;
+            updateStressButtons();
+          }, duration * 1000);
+        } else {
+          alert('CPU stress already running');
+        }
       } catch (err) {
         alert('Failed to start stress test');
       }
     }
 
     async function stopStress() {
+      if (!stressRunning) return;
+      
       try {
         const res = await fetch('/api/stress', { method: 'DELETE' });
         const data = await res.json();
+        stressRunning = false;
+        updateStressButtons();
         alert(`CPU stress ${data.status}`);
       } catch (err) {
         alert('Failed to stop stress test');
@@ -259,6 +303,7 @@
 
     loadMetadata();
     loadProducts();
+    updateStressButtons();
   </script>
 </body>
 </html>
