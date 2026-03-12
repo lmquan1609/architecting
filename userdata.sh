@@ -3,7 +3,8 @@ set -e
 
 # Update system and install dependencies
 dnf update -y
-dnf install -y nodejs22 git amazon-efs-utils
+dnf install -y nodejs22 git amazon-efs-utils python3 python3-pip    
+pip3 install botocore 
 
 # Mount EFS file system (replace with your EFS ID)
 EFS_ID=fs-04ffb1e04ec0b8138
