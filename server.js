@@ -58,7 +58,7 @@ app.get('/api/metadata', async (req, res) => {
 // CPU stress endpoint
 let stressInterval = null;
 app.post('/api/stress', (req, res) => {
-  const { duration = 60 } = req.body;
+  const { duration = 600 } = req.body;
   
   if (stressInterval) {
     return res.json({ status: 'already running' });
