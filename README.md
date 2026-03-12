@@ -79,7 +79,7 @@ sudo dnf install -y nodejs22 git postgresql17
 
 ```bash
 cd /home/ec2-user
-git clone -b lab08-rds-inventory https://github.com/vietaws/architecting.git
+git clone -b lab10-auto-scaling https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
@@ -90,7 +90,7 @@ cat > .env <<EOF
 DB_HOST=<rds-endpoint>
 DB_PORT=5432
 DB_USER=dbadmin
-DB_PASSWORD=<your-password>
+DB_PASSWORD=demoPassword
 PORT=3001
 EOF
 ```

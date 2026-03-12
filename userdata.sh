@@ -7,7 +7,7 @@ dnf install -y nodejs22 git postgresql17
 
 # Clone application
 cd /home/ec2-user
-git clone -b lab08-rds-inventory https://github.com/vietaws/architecting.git
+git clone -b lab10-auto-scaling https://github.com/vietaws/architecting.git
 cd architecting
 
 # Create .env file (update RDS_ENDPOINT with your actual RDS endpoint)
