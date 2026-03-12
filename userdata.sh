@@ -25,7 +25,7 @@ chmod 755 /mnt/efs
 
 # Clone application
 cd /home/ec2-user
-git clone -b lab08-rds-inventory https://github.com/vietaws/architecting.git
+git clone -b lab18-capstone https://github.com/vietaws/architecting.git
 cd architecting
 
 # Create .env file

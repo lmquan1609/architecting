@@ -38,22 +38,53 @@ async function getRDSCredentials() {
 
 // Initialize database pool
 let pool;
-(async () => {
-  const credentials = await getRDSCredentials();
-  pool = new Pool({
-    host: credentials.host,
-    port: process.env.DB_PORT || 5432,
-    database: 'demo',
-    user: credentials.username,
-    password: credentials.password,
-    ssl: { rejectUnauthorized: false }
-  });
-})();
+let dbReady = false;
+
+async function initializeDatabase() {
+  try {
+    console.log('Initializing database connection...');
+    const credentials = await getRDSCredentials();
+    console.log('RDS credentials obtained, connecting to:', credentials.host);
+    
+    pool = new Pool({
+      host: credentials.host,
+      port: process.env.DB_PORT || 5432,
+      database: 'demo',
+      user: credentials.username,
+      password: credentials.password,
+      ssl: { rejectUnauthorized: false }
+    });
+
+    // Test connection
+    const result = await pool.query('SELECT NOW()');
+    console.log('Database connected successfully:', result.rows[0]);
+    dbReady = true;
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    dbReady = false;
+  }
+}
+
+// Initialize on startup
+initializeDatabase();
 
 // Multer configurations
+const EFS_PATH = process.env.EFS_PATH || '/mnt/efs';
+
+// Ensure EFS directory exists
+if (!fs.existsSync(EFS_PATH)) {
+  console.log(`Creating EFS directory: ${EFS_PATH}`);
+  fs.mkdirSync(EFS_PATH, { recursive: true });
+}
+
 const s3Storage = multer.memoryStorage();
 const efsStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, process.env.EFS_PATH || '/mnt/efs'),
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(EFS_PATH)) {
+      return cb(new Error('EFS path not available'));
+    }
+    cb(null, EFS_PATH);
+  },
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
 });
 
@@ -62,7 +93,7 @@ const uploadEFS = multer({ storage: efsStorage, limits: { fileSize: 10 * 1024 * 
 
 app.use(express.json());
 app.use(express.static('public'));
-app.use('/avatars', express.static(process.env.EFS_PATH || '/mnt/efs'));
+app.use('/avatars', express.static(EFS_PATH));
 
 // Metadata endpoint
 app.get('/api/metadata', async (req, res) => {
@@ -123,43 +154,71 @@ app.delete('/api/stress', (req, res) => {
 // PRODUCT endpoints (RDS + S3)
 app.get('/api/products', async (req, res) => {
   try {
+    if (!dbReady) {
+      return res.status(503).json({ error: 'Database not ready' });
+    }
+    
     const result = await pool.query('SELECT * FROM products ORDER BY id');
     const products = await Promise.all(result.rows.map(async (p) => {
       if (p.image_url) {
-        const url = await getSignedUrl(s3Client, new GetObjectCommand({
-          Bucket: process.env.S3_BUCKET,
-          Key: p.image_url
-        }), { expiresIn: 3600 });
-        return { ...p, image_url: url };
+        try {
+          const url = await getSignedUrl(s3Client, new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET,
+            Key: p.image_url
+          }), { expiresIn: 3600 });
+          return { ...p, image_url: url };
+        } catch (err) {
+          console.error('Failed to generate presigned URL:', err);
+          return p;
+        }
       }
       return p;
     }));
     res.json(products);
   } catch (err) {
+    console.error('Get products error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/products', uploadS3.single('image'), async (req, res) => {
   const { name, qty } = req.body;
+  
+  console.log('POST /api/products:', { name, qty, hasFile: !!req.file });
+  
   try {
+    if (!dbReady) {
+      return res.status(503).json({ error: 'Database not ready' });
+    }
+    
+    if (!name || !qty) {
+      return res.status(400).json({ error: 'Name and quantity are required' });
+    }
+
     let imageKey = null;
     if (req.file) {
       imageKey = `products/${Date.now()}-${req.file.originalname}`;
+      console.log('Uploading to S3:', { bucket: process.env.S3_BUCKET, key: imageKey });
+      
       await s3Client.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET,
         Key: imageKey,
         Body: req.file.buffer,
         ContentType: req.file.mimetype
       }));
+      
+      console.log('S3 upload successful');
     }
 
     const result = await pool.query(
       'INSERT INTO products (name, qty, image_url) VALUES ($1, $2, $3) RETURNING *',
-      [name, qty, imageKey]
+      [name, parseInt(qty), imageKey]
     );
+    
+    console.log('Product inserted:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('Create product error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -209,34 +268,48 @@ app.delete('/api/products/:id', async (req, res) => {
 // CUSTOMER endpoints (DynamoDB + EFS)
 app.get('/api/customers', async (req, res) => {
   try {
+    console.log('Getting customers from DynamoDB:', process.env.DYNAMODB_TABLE);
     const result = await dynamoClient.send(new ScanCommand({
       TableName: process.env.DYNAMODB_TABLE
     }));
+    console.log('Customers retrieved:', result.Items?.length || 0);
     res.json(result.Items || []);
   } catch (err) {
+    console.error('Get customers error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/customers', uploadEFS.single('avatar'), async (req, res) => {
   const { name, location, dob, description } = req.body;
+  
+  console.log('POST /api/customers:', { name, location, dob, hasFile: !!req.file });
+  
   try {
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
     const customer = {
       id: Date.now().toString(),
       name,
-      location,
-      dob,
-      description,
+      location: location || '',
+      dob: dob || '',
+      description: description || '',
       avatar: req.file ? `/avatars/${req.file.filename}` : null
     };
 
+    console.log('Inserting customer to DynamoDB:', customer);
+    
     await dynamoClient.send(new PutCommand({
       TableName: process.env.DYNAMODB_TABLE,
       Item: customer
     }));
 
+    console.log('Customer inserted successfully');
     res.json(customer);
   } catch (err) {
+    console.error('Create customer error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -278,8 +351,13 @@ app.delete('/api/customers/:id', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
+  console.log('='.repeat(50));
   console.log(`Server running on port ${PORT}`);
-  console.log(`S3 Bucket: ${process.env.S3_BUCKET}`);
-  console.log(`DynamoDB Table: ${process.env.DYNAMODB_TABLE}`);
-  console.log(`EFS Path: ${process.env.EFS_PATH}`);
+  console.log(`S3 Bucket: ${process.env.S3_BUCKET || 'NOT SET'}`);
+  console.log(`DynamoDB Table: ${process.env.DYNAMODB_TABLE || 'NOT SET'}`);
+  console.log(`EFS Path: ${EFS_PATH}`);
+  console.log(`AWS Region: ${process.env.AWS_REGION || 'NOT SET'}`);
+  console.log(`DB Secret Name: ${process.env.DB_SECRET_NAME || 'NOT SET'}`);
+  console.log(`Database Ready: ${dbReady}`);
+  console.log('='.repeat(50));
 });
