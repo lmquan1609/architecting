@@ -49,7 +49,7 @@ chown -R ec2-user:ec2-user /home/ec2-user/architecting
 # Create systemd service
 cat > /etc/systemd/system/crm-app.service <<'EOFS'
 [Unit]
-Description=CRM Application
+Description=CRM Application - AWS Architecting Capstone Project - Viet Tran
 After=network.target
 
 [Service]
