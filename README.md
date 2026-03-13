@@ -88,9 +88,39 @@ sudo postgresql-setup --initdb
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
+# Verify psql running
+sudo systemctl status postgesql
+
+# Create db and table
+sudo -i -u postgres
+createdb demo
+exit
+
+# Connect to create table
+sudo -u postgres psql
+\c demo
+
+# Create table
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(10, 2),
+  quantity INTEGER DEFAULT 0
+);
+
+# Insert Test records
+INSERT INTO products (name, price, quantity) VALUES
+  ('Laptop', 999.99, 10),
+  ('Mouse', 29.99, 50),
+  ('Keyboard', 79.99, 30);
+
+# Select all products
+SELECT * FROM products;
+```
+### 3. Configure dbadmin
+```bash
 # Create database and user
 sudo -u postgres psql
-CREATE DATABASE demo;
 CREATE USER dbadmin WITH PASSWORD 'demoPassword';
 GRANT ALL PRIVILEGES ON DATABASE demo TO dbadmin;
 \c demo
@@ -102,7 +132,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;
 psql -l
 exit
 
-# # Verify
+# Verify
 psql -h localhost -U dbadmin -d demo
 ```
 Optional - Configure remote access: If you need to access PostgreSQL remotely, edit:
@@ -111,7 +141,7 @@ Optional - Configure remote access: If you need to access PostgreSQL remotely, e
 Then restart: sudo systemctl restart postgresql
 
 
-### 3. Configure authentication for psql
+### 4. Configure authentication for psql
 
 ```bash
 # Edit the postgresql.conf and postgresql file:
@@ -150,23 +180,6 @@ You should see 0.0.0.0:5432 instead of 127.0.0.1:5432
 # Test connection
 psql -h localhost -U dbadmin -d demo
 Enter password: demoPassword
-
-# Create table
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  price DECIMAL(10, 2),
-  quantity INTEGER DEFAULT 0
-);
-
-# Insert Test records
-INSERT INTO products (name, price, quantity) VALUES
-  ('Laptop', 999.99, 10),
-  ('Mouse', 29.99, 50),
-  ('Keyboard', 79.99, 30);
-
-# Select all products
-SELECT * FROM products;
 ```
 
 ## 📦 PART 2 - Install and Configure Application
