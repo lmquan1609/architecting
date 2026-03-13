@@ -129,7 +129,7 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dbadmin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;
 
 # Verify
-psql -l
+\l
 exit
 
 # Verify
