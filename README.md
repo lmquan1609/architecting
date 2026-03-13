@@ -95,44 +95,24 @@ CREATE USER dbadmin WITH PASSWORD 'demoPassword';
 GRANT ALL PRIVILEGES ON DATABASE demo TO dbadmin;
 \c demo
 GRANT ALL ON SCHEMA public TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dbadmin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;
 EOF
 
 # Verify
 psql -l
 exit
 
-# Connect to db (Optional)
-sudo -u postgres psql -d demo
+# # Verify
+psql -h localhost -U dbadmin -d demo
 ```
 Optional - Configure remote access: If you need to access PostgreSQL remotely, edit:
 - /var/lib/pgsql/data/postgresql.conf - set listen_addresses = '*'
 - /var/lib/pgsql/data/pg_hba.conf - add client authentication rules
 Then restart: sudo systemctl restart postgresql
 
-### 3.  Configure dbadmin for psql
 
-```bash
-# Switch to postgres user and enter PostgreSQL mode
-sudo -u postgres psql
-
-# Create the dbadmin user with password
-CREATE USER dbadmin WITH PASSWORD 'demoPassword';
-
-# Grant privileges on the demo database
-GRANT ALL PRIVILEGES ON DATABASE providers TO dbadmin;
-\c demo
-GRANT ALL ON SCHEMA public TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dbadmin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;
-
-# Exit psql mode
-\q
-
-# Verify
-psql -h localhost -U dbadmin -d demo
-```
-
-### 4. Configure authentication for psql
+### 3. Configure authentication for psql
 
 ```bash
 # Edit the postgresql.conf and postgresql file:
