@@ -89,7 +89,7 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
 # Create database and user
-sudo -u postgres psql <<EOF
+sudo -u postgres psql
 CREATE DATABASE demo;
 CREATE USER dbadmin WITH PASSWORD 'demoPassword';
 GRANT ALL PRIVILEGES ON DATABASE demo TO dbadmin;
@@ -97,7 +97,6 @@ GRANT ALL PRIVILEGES ON DATABASE demo TO dbadmin;
 GRANT ALL ON SCHEMA public TO dbadmin;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dbadmin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dbadmin;
-EOF
 
 # Verify
 psql -l
