@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Providers Directory</title>
+  <title>Products Management</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -13,7 +13,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       background: white;
       border-radius: 16px;
@@ -28,6 +28,7 @@
     }
     .form {
       display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
       gap: 15px;
       margin-bottom: 30px;
       padding: 20px;
@@ -56,82 +57,101 @@
       transition: background 0.3s;
     }
     button:hover { background: #5568d3; }
-    .providers {
+    .products {
       display: grid;
       gap: 15px;
     }
-    .provider {
-      display: flex;
-      justify-content: space-between;
+    .product {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
       align-items: center;
+      gap: 15px;
       padding: 20px;
       background: #f8f9fa;
       border-radius: 8px;
       transition: transform 0.2s;
     }
-    .provider:hover { transform: translateY(-2px); }
-    .provider-info h3 { color: #333; margin-bottom: 5px; }
-    .provider-info p { color: #666; }
+    .product:hover { transform: translateY(-2px); }
+    .product-name { 
+      font-weight: 600; 
+      color: #333; 
+    }
+    .product-price { 
+      color: #28a745; 
+      font-weight: 500; 
+    }
+    .product-quantity { 
+      color: #666; 
+    }
     .delete-btn {
       padding: 8px 16px;
       background: #dc3545;
       font-size: 0.9rem;
     }
     .delete-btn:hover { background: #c82333; }
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
+      .form {
+        grid-template-columns: 1fr;
+      }
+      .product {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
       .container { padding: 20px; }
       h1 { font-size: 1.5rem; }
-      .provider { flex-direction: column; gap: 10px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Providers Directory</h1>
+    <h1>Products Management</h1>
     <div class="form">
-      <input type="text" id="name" placeholder="Provider Name" required>
-      <input type="text" id="city" placeholder="Provider City" required>
-      <button onclick="addProvider()">Add Provider</button>
+      <input type="text" id="name" placeholder="Product Name" required>
+      <input type="number" id="price" placeholder="Price" step="0.01" required>
+      <input type="number" id="quantity" placeholder="Quantity" required>
+      <button onclick="addProduct()">Add Product</button>
     </div>
-    <div class="providers" id="providers"></div>
+    <div class="products" id="products"></div>
   </div>
 
   <script>
-    async function loadProviders() {
-      const res = await fetch('/api/providers');
-      const providers = await res.json();
-      document.getElementById('providers').innerHTML = providers.map(p => `
-        <div class="provider">
-          <div class="provider-info">
-            <h3>${p.provider_name}</h3>
-            <p>${p.provider_city}</p>
-          </div>
-          <button class="delete-btn" onclick="deleteProvider(${p.provider_id})">Delete</button>
+    async function loadProducts() {
+      const res = await fetch('/api/products');
+      const products = await res.json();
+      document.getElementById('products').innerHTML = products.map(p => `
+        <div class="product">
+          <div class="product-name">${p.name}</div>
+          <div class="product-price">$${parseFloat(p.price).toFixed(2)}</div>
+          <div class="product-quantity">Qty: ${p.quantity}</div>
+          <button class="delete-btn" onclick="deleteProduct(${p.id})">Delete</button>
         </div>
       `).join('');
     }
 
-    async function addProvider() {
+    async function addProduct() {
       const name = document.getElementById('name').value;
-      const city = document.getElementById('city').value;
-      if (!name || !city) return;
-      const provider_id = Date.now();
-      await fetch('/api/providers', {
+      const price = document.getElementById('price').value;
+      const quantity = document.getElementById('quantity').value;
+      if (!name || !price || !quantity) return;
+      
+      await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider_id, provider_name: name, provider_city: city })
+        body: JSON.stringify({ name, price, quantity })
       });
+      
       document.getElementById('name').value = '';
-      document.getElementById('city').value = '';
-      loadProviders();
+      document.getElementById('price').value = '';
+      document.getElementById('quantity').value = '';
+      loadProducts();
     }
 
-    async function deleteProvider(id) {
-      await fetch(`/api/providers/${id}`, { method: 'DELETE' });
-      loadProviders();
+    async function deleteProduct(id) {
+      await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      loadProducts();
     }
 
-    loadProviders();
+    loadProducts();
   </script>
 </body>
 </html>
