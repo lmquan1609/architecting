@@ -21,7 +21,8 @@ Simple image upload application that stores files on Amazon EFS and displays AWS
 ```bash
 sudo -i
 dnf update -y
-dnf install -y nodejs22 git amazon-efs-utils
+dnf install -y nodejs22 git amazon-efs-utils python3 python3-pip    
+pip3 install botocore 
 ```
 
 ### 2. Mount EFS file system
