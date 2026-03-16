@@ -30,7 +30,7 @@ chmod 755 /data/ebs
 
 ```bash
 cd /home/ec2-user
-git clone -b lab02-ebs-image-uploader https://github.com/vietaws/architecting.git
+git clone -b lab03-ebs-image-uploader https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
@@ -104,7 +104,7 @@ journalctl -u demo-app -n 50
 
 ## Environment Variables
 
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port (default: 3001)
 - `UPLOAD_DIR` - Image storage directory (default: /data/ebs)
 
 ## Testing
