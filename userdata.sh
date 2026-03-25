@@ -11,7 +11,7 @@ DB_SECRET_NAME=rds-cred
 
 # Update system and install dependencies
 dnf update -y
-dnf install -y nodejs22 git amazon-efs-utils python3 python3-pip    
+dnf install -y nodejs22 git postgresql17 amazon-efs-utils python3 python3-pip    
 pip3 install botocore 
 
 # Mount EFS
