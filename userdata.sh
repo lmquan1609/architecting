@@ -3,7 +3,6 @@ set -e
 
 # Configuration - Update these values
 RDS_ENDPOINT=demo-cluster2.cluster-c6w5wziqkswf.ap-southeast-1.rds.amazonaws.com
-RDS_PASSWORD=demoPassword
 S3_BUCKET=crm-demo-bucket-189999
 DYNAMODB_TABLE=customers-18999
 EFS_ID=fs-0f54729218001c067
@@ -34,7 +33,6 @@ DB_SECRET_NAME=${DB_SECRET_NAME}
 DB_HOST=${RDS_ENDPOINT}
 DB_PORT=5432
 DB_USER=dbadmin
-DB_PASSWORD=${RDS_PASSWORD}
 S3_BUCKET=${S3_BUCKET}
 DYNAMODB_TABLE=${DYNAMODB_TABLE}
 EFS_PATH=/mnt/efs
