@@ -3,7 +3,7 @@ import { marshall } from '@aws-sdk/util-dynamodb';
 import { randomUUID } from 'crypto';
 
 const db = new DynamoDBClient({});
-const TABLE = 'products';
+const TABLE = process.env.TABLE_NAME;
 
 const handler = async (event) => {
     const { name, date, status = 'pending' } = JSON.parse(event.body);

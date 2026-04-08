@@ -1,11 +1,27 @@
-const API = 'https://YOUR_API_GATEWAY_ID.execute-api.YOUR_REGION.amazonaws.com/prod/todos';
+const API = 'https://yfe93wjfjg.execute-api.ap-southeast-1.amazonaws.com/dev/todos';
 
 let allTodos = [];
 let currentFilter = 'all';
 
+// API Gateway non-proxy integration returns { statusCode, headers, body }
+// This unwraps it so we always get the actual data
+async function apiFetch(url, options) {
+    const res = await fetch(url, options);
+    let data = await res.json();
+    if (data && typeof data.body === 'string') data = JSON.parse(data.body);
+    return data;
+}
+
 async function loadTodos() {
-    const res = await fetch(API);
-    allTodos = await res.json();
+    const list = document.getElementById('todos-list');
+    list.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Loading...</p>';
+    try {
+        const data = await apiFetch(API);
+        allTodos = Array.isArray(data) ? data : [];
+    } catch (e) {
+        list.innerHTML = `<p style="text-align:center;color:#ef4444;padding:20px;">Failed to load: ${e.message}</p>`;
+        return;
+    }
     renderTodos();
 }
 
@@ -19,13 +35,13 @@ function renderTodos() {
     }
 
     list.innerHTML = filtered.map(todo => `
-        <div class="list-item ${todo.status === 'done' ? 'done' : ''}">
+        <div class="list-item ${todo.status === 'completed' ? 'done' : ''}">
             <div>
                 <h3>${todo.name}</h3>
                 <p>Due: ${todo.date || 'No date'}</p>
             </div>
             <div class="item-actions">
-                <span class="badge badge-${todo.status}">${todo.status}</span>
+                <span class="badge badge-${todo.status === 'completed' ? 'done' : 'pending'}">${todo.status}</span>
                 <button class="btn-edit" onclick="editTodo('${todo.id}')">Edit</button>
                 ${todo.status === 'pending'
                     ? `<button class="btn-primary" style="padding:8px 16px;font-size:12px;" onclick="markDone('${todo.id}')">✓ Done</button>`
@@ -48,6 +64,7 @@ function showForm() {
     document.getElementById('todo-id').value = '';
     document.getElementById('todo-name').value = '';
     document.getElementById('todo-date').value = '';
+    document.getElementById('todo-status').classList.add('hidden');
     document.getElementById('todo-form').classList.remove('hidden');
 }
 
@@ -62,6 +79,9 @@ function editTodo(id) {
     document.getElementById('todo-id').value = todo.id;
     document.getElementById('todo-name').value = todo.name;
     document.getElementById('todo-date').value = todo.date || '';
+    const statusEl = document.getElementById('todo-status');
+    statusEl.value = todo.status;
+    statusEl.classList.remove('hidden');
     document.getElementById('todo-form').classList.remove('hidden');
 }
 
@@ -69,38 +89,28 @@ async function saveTodo() {
     const id = document.getElementById('todo-id').value;
     const name = document.getElementById('todo-name').value.trim();
     const date = document.getElementById('todo-date').value;
+    const status = document.getElementById('todo-status').value;
     if (!name) return alert('Name is required');
 
-    if (id) {
-        await fetch(`${API}/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, date })
-        });
-    } else {
-        await fetch(API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, date, status: 'pending' })
-        });
-    }
-
+    const url = id ? `${API}?id=${id}` : API;
+    const body = id ? { name, date, status } : { name, date, status: 'pending' };
+    await apiFetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     hideForm();
     loadTodos();
 }
 
 async function markDone(id) {
-    await fetch(`${API}/${id}`, {
+    await apiFetch(`${API}?id=${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'done' })
+        body: JSON.stringify({ status: 'completed' })
     });
     loadTodos();
 }
 
 async function deleteTodo(id) {
     if (!confirm('Delete this todo?')) return;
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    await apiFetch(`${API}?id=${id}`, { method: 'DELETE' });
     loadTodos();
 }
 

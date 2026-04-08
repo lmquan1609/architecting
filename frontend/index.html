@@ -13,7 +13,7 @@
             <nav>
                 <button class="tab active" data-tab="all" onclick="filterTodos('all', this)">All</button>
                 <button class="tab" data-tab="pending" onclick="filterTodos('pending', this)">Pending</button>
-                <button class="tab" data-tab="done" onclick="filterTodos('done', this)">Done</button>
+                <button class="tab" data-tab="completed" onclick="filterTodos('completed', this)">Completed</button>
             </nav>
         </header>
 
@@ -27,6 +27,10 @@
                 <input type="hidden" id="todo-id">
                 <input type="text" id="todo-name" placeholder="Todo name" required>
                 <input type="date" id="todo-date" placeholder="Due date">
+                <select id="todo-status" class="hidden" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;">
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
                 <div class="form-actions">
                     <button class="btn-primary" onclick="saveTodo()">Save</button>
                     <button class="btn-secondary" onclick="hideForm()">Cancel</button>
