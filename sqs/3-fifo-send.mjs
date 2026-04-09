@@ -2,7 +2,7 @@ import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 
 const QUEUE_URL =
   process.env.QUEUE_URL ||
-  'https://sqs.ap-southeast-1.amazonaws.com/916495840179/vietaws.fifo';
+  'https://sqs.ap-southeast-1.amazonaws.com/274595021951/vietaws.fifo';
 
 const sqsClient = new SQSClient({
   region: process.env.REGION || 'ap-southeast-1',
