@@ -17,9 +17,9 @@ while (true) {
       QueueUrl: QUEUE_URL,
       // AttributeNames: ['All'],
       // MessageAttributeNames: ['project', 'user'],
-      WaitTimeSeconds: 0, //long polling 5 seconds
-      VisibilityTimeout: 30, //will get this message in 10 seconds
-      MaxNumberOfMessages: 1,
+      // WaitTimeSeconds: 0, //long polling 5 seconds
+      // VisibilityTimeout: 30, //will get this message in 10 seconds
+      // MaxNumberOfMessages: 1,
     })
   );
 
