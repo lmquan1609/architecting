@@ -1,6 +1,6 @@
 import { EC2Client, DescribeInstancesCommand, ModifyInstanceAttributeCommand } from "@aws-sdk/client-ec2";
 
-const ec2Client = new EC2Client({ region: "us-east-1" }); // Thay đổi region của bạn
+const ec2Client = new EC2Client({ region: "ap-southeast-1" }); // Thay đổi region của bạn
 
 exports.handler = async (event) => {
     try {
