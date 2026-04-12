@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo 04 - !Ref to link parameters and resources
+
+Parameters:
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select an existing VPC
+
+Resources:
+  # !Ref on a resource returns its physical ID (e.g. sg-xxxxxxxx)
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId                 # !Ref on parameter → its value
+      GroupDescription: Allow HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.micro
+      ImageId: !Ref AmiId               # !Ref on parameter → its value
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup         # !Ref on resource → physical ID
+      Tags:
+        - Key: Name
+          Value: demo-04-ec2

@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo 15 - Nested Stacks (parent) - orchestrates network and ec2 child stacks
+
+Parameters:
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+  # S3 bucket where child templates are uploaded
+  TemplatesBucketUrl:
+    Type: String
+    Description: S3 URL prefix where child templates are stored (e.g. https://s3.amazonaws.com/my-bucket)
+
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub '${TemplatesBucketUrl}/network.yaml'
+
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub '${TemplatesBucketUrl}/ec2.yaml'
+      Parameters:
+        AmiId: !Ref AmiId
+        # Pass output of NetworkStack as parameter to EC2Stack using !GetAtt
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        SubnetId: !GetAtt NetworkStack.Outputs.SubnetId
+
+Outputs:
+  VpcId:
+    Value: !GetAtt NetworkStack.Outputs.VpcId
+  InstanceId:
+    Value: !GetAtt EC2Stack.Outputs.InstanceId

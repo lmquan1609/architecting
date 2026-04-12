@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'   # Optional - always use this value
+Description: Demo 00 - CloudFormation template skeleton
+
+# OPTIONAL - extra info for AWS Console UI or tools
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups: []
+
+# OPTIONAL - runtime inputs
+Parameters: {}
+
+# OPTIONAL - static lookup tables
+Mappings: {}
+
+# OPTIONAL - boolean logic to conditionally create resources
+Conditions: {}
+
+# OPTIONAL - macros (e.g. SAM transform)
+# Transform: AWS::Serverless-2016-10-31
+
+# MANDATORY - the only required section
+Resources:
+  # Every resource needs a LogicalId, Type, and Properties
+  DummyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: Purpose
+          Value: skeleton-demo
+
+# OPTIONAL - expose values after stack creation
+Outputs:
+  BucketName:
+    Value: !Ref DummyBucket
+    Description: Name of the created S3 bucket

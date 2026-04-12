@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo 01 - First EC2, hardcoded values, no parameters
+
+Resources:
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.micro
+      # Replace with a valid Amazon Linux 2023 ARM AMI ID for your region
+      ImageId: ami-0f9de6e2d2f067fca
+      Tags:
+        - Key: Name
+          Value: demo-01-ec2
