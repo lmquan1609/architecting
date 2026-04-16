@@ -25,13 +25,15 @@ Resources:
       ImageId: !Ref AmiId
       SubnetId: !Ref SubnetId
       # !If [ConditionName, ValueIfTrue, ValueIfFalse]
-      InstanceType: !If [IsProd, t4g.medium, t4g.micro]
+      InstanceType: !If [IsProd, t4g.small, t4g.micro]
       Tags:
         - Key: Name
           Value: !Sub 'demo-09-${Environment}'
-        - Key: Backup
-          # AWS::NoValue removes the property entirely when condition is false
-          Value: !If [IsProd, enabled, !Ref AWS::NoValue]
+        - !If
+            - IsProd
+            - Key: backup
+              Value: enabled
+            - !Ref AWS::NoValue
 
   # NAT Gateway only created in prod
   NatEIP:
@@ -49,7 +51,7 @@ Resources:
 
 Outputs:
   InstanceType:
-    Value: !If [IsProd, t4g.medium, t4g.micro]
+    Value: !If [IsProd, t4g.small, t4g.micro]
   NatGatewayId:
     Condition: IsProd
     Value: !Ref NatGateway

@@ -27,7 +27,15 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-        - arn:aws:iam::aws:policy/CloudFormationReadOnlyAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
+      Policies:
+        - PolicyName: AllowCfnSignal
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: cloudformation:SignalResource
+                Resource: !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -56,7 +64,7 @@ Resources:
           files:
             # --- Change this content and update the stack to trigger cfn-hup ---
             /var/www/html/index.html:
-              content: !Sub '<h1>Hello from cfn-init</h1>'
+              content: !Sub '<html><body><h1>Hello from cfn-init! Today is the best day to learn AWS!</h1></body></html>'
               mode: '000644'
 
             # cfn-hup daemon config — points to this stack and region
@@ -100,14 +108,17 @@ Resources:
 
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT10M
+        Timeout: PT5M
 
     Properties:
       InstanceType: t4g.micro
       ImageId: !Ref AmiId
-      SubnetId: !Ref SubnetId
       IamInstanceProfile: !Ref InstanceProfile
-      SecurityGroupIds: [!Ref WebSG]
+      NetworkInterfaces:   
+        - DeviceIndex: 0
+          SubnetId:   !Ref SubnetId                                                                                      
+          GroupSet: [!Ref WebSG]
+          AssociatePublicIpAddress: true
       UserData:
         Fn::Base64:
           !Sub |

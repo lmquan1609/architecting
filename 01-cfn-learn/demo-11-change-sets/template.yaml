@@ -14,7 +14,7 @@ Resources:
       ImageId: !Ref AmiId
       Tags:
         - Key: Name
-          Value: demo-10-ec2
+          Value: demo-11-ec2
         - Key: Version
           Value: v1             # <-- change this to v2 to demo a non-replacement change
 

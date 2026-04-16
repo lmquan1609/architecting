@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Demo 04 - !Ref to link parameters and resources
+Description: Demo 06 - Outputs to expose resource values
 
 Parameters:
   AmiId:
@@ -51,12 +51,33 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref AmiId               # !Ref on parameter → its value
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Update and install Apache web server
+          yum update -y
+          yum install -y httpd
+          systemctl start httpdx`
+          systemctl enable httpd
+          # Create a simple website page
+          echo "<html><body><h1>Welcome to my CloudFormation Website from ${AWS::Region}!</h1></body></html>" > /var/www/html/index.html
       NetworkInterfaces:
-        - AssociatePublicIpAddress: false
+        - AssociatePublicIpAddress: true
           DeviceIndex: '0'
           SubnetId: !Ref MySubnet
           GroupSet:
             - !Ref WebSecurityGroup     # !Ref on resource → physical ID    
-      Tags:
-        - Key: Name
-          Value: demo-04-ec2
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref WebServer
+
+  PublicIpAddress:
+    Description: Public IP of the EC2 instance
+    # !GetAtt retrieves a specific attribute — not available via !Ref
+    Value: !GetAtt WebServer.PublicIp
+
+  SecurityGroupId:
+    Description: Security group ID
+    Value: !Ref WebSecurityGroup

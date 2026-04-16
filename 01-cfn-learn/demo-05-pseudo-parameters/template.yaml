@@ -7,7 +7,7 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       # !Sub interpolates ${Variable} — builds a unique bucket name
-      BucketName: !Sub 'demo-04-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub 'demo-05-${AWS::AccountId}-${AWS::Region}'
       Tags:
         - Key: StackName
           Value: !Ref AWS::StackName

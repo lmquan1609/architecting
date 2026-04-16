@@ -41,7 +41,7 @@ Resources:
       # !Base64 - encode user data string
       UserData:
         Fn::Base64:
-          # !Sub - string interpolation with ${Variable}
+          # !Sub - string interpolation with ${Variable} - Substitute
           !Sub |
             #!/bin/bash
             echo "Stack: ${AWS::StackName}" > /tmp/info.txt

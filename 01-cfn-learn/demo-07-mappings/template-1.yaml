@@ -5,11 +5,9 @@ Description: Demo 07 - Mappings for region-based AMI lookup
 Mappings:
   RegionAMI:
     us-east-1:
-      AmazonLinux2023: ami-0f9de6e2d2f067fca
-    us-west-2:
-      AmazonLinux2023: ami-05572e392e8b2b4d4
+      AmazonLinux2023: ami-088cedaa951dcc6a5
     ap-southeast-1:
-      AmazonLinux2023: ami-0b825ad86ddcfb907
+      AmazonLinux2023: ami-00835124e2236f36f
 
 Resources:
   WebServer:
