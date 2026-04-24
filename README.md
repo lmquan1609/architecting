@@ -1,132 +1,376 @@
-# CloudFront Distribution Configuration Guide
+# AWS Simple Data Lake — Demo Guide
 
-## Part 1: CloudFront + S3 (Private Bucket via OAC)
+## Scenario
 
-S3 bucket is **not** public and does **not** host a static website. CloudFront accesses it using **Origin Access Control (OAC)**.
+An e-commerce company collects raw order and clickstream events. The data lake ingests raw data, transforms it into a queryable format, and serves analytics — all on AWS with S3 as the backbone.
 
-### 1.1 Create S3 Bucket
+```
+[Data Sources]
+  App Events (JSON)
+  CSV Uploads (orders)
+        │
+        ▼
+[S3 — Raw Zone]          (s3://datalake/raw/)
+        │
+        ▼
+[AWS Glue — ETL Job]     (clean, convert to Parquet)
+        │
+        ▼
+[S3 — Processed Zone]    (s3://datalake/processed/)
+        │
+        ▼
+[AWS Glue Crawler]       (auto-discover schema → Data Catalog)
+        │
+        ▼
+[Amazon Athena]          (SQL queries on S3)
+```
 
-- Block all public access (keep all checkboxes enabled)
-- Do **not** enable static website hosting
+---
 
-### 1.2 Create CloudFront Distribution
+## AWS Services Used
 
-1. Go to **CloudFront → Create distribution**
-2. Choose "Pay as you go"
-3. Distribution name: demo-cf / Click **Next**
-4. Origin type: Amazon S3
-5. **S3 Origin**: select your S3 bucket (`your-bucket.s3.amazonaws.com`)
-6. **Cache policy**: `CachingOptimized`
-7. Enable Security: `Do not enable security protection` / Click **Next**
-8. Click **Create distribution**
+| Service | Role |
+|---|---|
+| S3 | Storage backbone — raw, processed, failed zones |
+| AWS Glue (ETL + Crawler) | Transform data + auto-catalog schema |
+| Glue Data Catalog | Central metadata store |
+| Amazon Athena | Serverless SQL queries on S3 |
+| IAM | Least-privilege roles per service |
+| S3 Lifecycle Policies | Auto-archive old raw data to Glacier |
+| CloudWatch | Monitor Glue job metrics |
+| AWS Lake Formation | Fine-grained table/column/row-level access control |
 
-> CloudFront will show a banner: **"Copy policy"** — do this before leaving.
+---
 
-### 1.3 Update S3 Bucket Policy
+## Step-by-Step Demo
 
-Paste the copied policy into your S3 bucket → **Permissions → Bucket policy**:
+### Step 1 — Create S3 Bucket with Zone Prefixes
+
+```bash
+aws s3api create-bucket \
+  --bucket my-datalake-demo \
+  --region ap-southeast-1 \
+  --create-bucket-configuration LocationConstraint=ap-southeast-1
+
+# Create logical zones as prefixes
+aws s3api put-object --bucket my-datalake-demo --key raw/
+aws s3api put-object --bucket my-datalake-demo --key processed/
+aws s3api put-object --bucket my-datalake-demo --key failed/
+aws s3api put-object --bucket my-datalake-demo --key athena-results/
+```
+
+Block all public access:
+
+```bash
+aws s3api put-public-access-block \
+  --bucket my-datalake-demo \
+  --public-access-block-configuration \
+    "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+```
+
+---
+
+### Step 2 — Set S3 Lifecycle Policy (Raw Zone → Glacier after 90 days)
+
+```bash
+aws s3api put-bucket-lifecycle-configuration \
+  --bucket my-datalake-demo \
+  --lifecycle-configuration file://lifecycle.json
+```
+
+`lifecycle.json`:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowCloudFrontServicePrincipal",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "cloudfront.amazonaws.com"
-      },
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::your-bucket/*",
-      "Condition": {
-        "StringEquals": {
-          "AWS:SourceArn": "arn:aws:cloudfront::<account-id>:distribution/<distribution-id>"
-        }
-      }
-    }
-  ]
+  "Rules": [{
+    "ID": "archive-raw",
+    "Filter": { "Prefix": "raw/" },
+    "Status": "Enabled",
+    "Transitions": [{
+      "Days": 90,
+      "StorageClass": "GLACIER"
+    }]
+  }]
 }
 ```
 
-Replace `your-bucket`, `<account-id>`, and `<distribution-id>` with your actual values.
-
 ---
 
-## Part 2: Add EC2 as a Second Origin (Path: `/images`)
+### Step 3 — Create IAM Role
 
-Serve `/images/*` from an EC2 instance while everything else is served from S3.
+**Glue role** — can read `raw/`, write `processed/`, and update Glue Data Catalog
 
-### 2.1 Add EC2 Origin
-
-1. Go to your CloudFront distribution → **Origins → Create origin**
-2. **Origin domain**: your EC2 public DNS or IP (e.g., `ec2-xx-xx-xx-xx.compute.amazonaws.com`)
-3. **Protocol**: `HTTP only` (or HTTPS if EC2 has a cert)
-4. **HTTP port**: `80` (or your app port)
-5. Save
-
-### 2.2 Add Cache Behavior for `/images`
-
-1. Go to **Behaviors → Create behavior**
-2. **Path pattern**: `/images/*`
-3. **Origin**: select your EC2 origin
-4. **Viewer protocol policy**: `Redirect HTTP to HTTPS`
-5. **Cache policy**: `CachingDisabled` (or a custom policy if caching is needed)
-6. **Precedence**: ensure this behavior has a **lower number** (higher priority) than the default (`*`) behavior
-
-> The default `*` behavior continues to serve from S3.
-
-### 2.3 EC2 Security Group
-
-Allow inbound traffic **only from CloudFront** on port 80/443:
-
-- **Source**: Use [CloudFront managed prefix list](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/LocationsOfEdgeServers.html) or restrict to `0.0.0.0/0` temporarily and tighten later.
-
-Recommended: use the AWS-managed prefix list ID for CloudFront:
-
-```
-pl-3b927c52  # us-east-1 example — check your region
+```bash
+aws iam attach-role-policy \
+  --role-name GlueDatalakeRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
 ```
 
 ---
 
-## Part 3: Origin Group (Active/Passive Failover)
+### Step 4 — Upload Sample Data to Raw Zone
 
-Configure an **Origin Group** so that if EC2 (primary) fails, CloudFront falls back to an S3 error page (secondary).
+```bash
+# Create a sample JSON file
+echo '{"order_id":"123","user_id":"456","amount":99.99}' > order1.json
+echo '{"order_id":"124","user_id":"789","amount":45.00}' >> order1.json
 
-### 3.1 Create the Origin Group
-
-1. Go to **Origins → Create origin group**
-2. **Name**: `images-origin-group`
-3. **Primary origin**: EC2 origin
-4. **Secondary origin**: S3 origin
-5. **Failover criteria** — select HTTP status codes that trigger failover:
-   - `500`, `502`, `503`, `504` (server errors)
-   - Optionally add `403`, `404` if EC2 returns those on failure
-6. Save
-
-### 3.2 Update the `/images` Behavior
-
-1. Go to **Behaviors** → edit the `/images/*` behavior
-2. **Origin**: change from EC2 origin → **`images-origin-group`**
-3. Save
-
-### 3.3 S3 Fallback Error Page (Optional)
-
-To serve a custom error page from S3 when EC2 fails:
-
-1. Upload a fallback file to S3, e.g., `images/unavailable.html`
-2. In CloudFront → **Error pages → Create custom error response**:
-   - **HTTP error code**: `503`
-   - **Response page path**: `/images/unavailable.html`
-   - **HTTP response code**: `200`
+aws s3 cp order1.json s3://my-datalake-demo/raw/year=2026/month=04/day=24/order1.json
+```
 
 ---
 
-## Summary
+### Step 5 — Create Glue ETL Job (JSON → Parquet)
 
-| Path | Origin | Failover |
-|------|--------|----------|
-| `/*` (default) | S3 (private via OAC) | — |
-| `/images/*` | EC2 (primary) | S3 (passive fallback) |
+1. Go to **AWS Glue → ETL Jobs → Create job**
+2. Choose **Spark script editor**
+3. Use the script at `glue/transform.py` (see below)
+4. IAM role: `GlueDatalakeRole`
+5. Job parameters:
+   - `--SOURCE_PATH` = `s3://my-datalake-demo/raw/`
+   - `--DEST_PATH` = `s3://my-datalake-demo/processed/`
 
-> All origins are private. S3 is never directly accessible. EC2 should only accept traffic from CloudFront.
+`glue/transform.py` (minimal):
+
+```python
+import sys
+from awsglue.context import GlueContext
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+args = getResolvedOptions(sys.argv, ['SOURCE_PATH', 'DEST_PATH'])
+sc = SparkContext()
+gc = GlueContext(sc)
+
+df = gc.spark_session.read.json(args['SOURCE_PATH'])
+df.write.mode("overwrite").parquet(args['DEST_PATH'])
+```
+
+---
+
+### Step 6 — Create Glue Crawler (Auto-catalog Processed Zone)
+
+```bash
+aws glue create-crawler \
+  --name datalake-processed-crawler \
+  --role arn:aws:iam::<account-id>:role/GlueDatalakeRole \
+  --database-name datalake_db \
+  --targets '{"S3Targets": [{"Path": "s3://my-datalake-demo/processed/"}]}'
+
+aws glue start-crawler --name datalake-processed-crawler
+```
+
+After the crawler runs, a table appears in **Glue Data Catalog → datalake_db**.
+
+---
+
+### Step 7 — Query with Athena
+
+1. Go to **Athena → Query editor**
+2. Set workgroup output to `s3://my-datalake-demo/athena-results/`
+3. Run:
+
+```sql
+SELECT order_id, user_id, amount
+FROM datalake_db.processed
+WHERE amount > 50
+LIMIT 10;
+```
+
+---
+
+## Part 2: Fine-Grained Access Control with AWS Lake Formation
+
+Build on top of the existing setup to enforce **table-level**, **column-level**, and **row-level** access control using Lake Formation — replacing broad IAM/S3 bucket policies with granular data permissions.
+
+### Architecture Addition
+
+```
+[Glue Data Catalog]
+        │
+        ▼
+[AWS Lake Formation]   ← central permission layer
+        │
+   ┌────┴────┐
+   ▼         ▼
+[Analyst A] [Analyst B]
+(full table) (masked columns, filtered rows)
+```
+
+---
+
+### Step 8 — Bootstrap Lake Formation
+
+#### 8.1 Set Lake Formation as the Permission Model
+
+```bash
+aws lakeformation put-data-lake-settings \
+  --data-lake-settings '{
+    "DataLakeAdmins": [
+      {"DataLakePrincipalIdentifier": "arn:aws:iam::<account-id>:role/LakeAdminRole"}
+    ],
+    "CreateDatabaseDefaultPermissions": [],
+    "CreateTableDefaultPermissions": []
+  }'
+```
+
+> Setting `CreateDatabaseDefaultPermissions` and `CreateTableDefaultPermissions` to empty arrays **disables** the default IAM-only fallback, forcing all access through Lake Formation.
+
+#### 8.2 Register the S3 Data Lake Location
+
+```bash
+aws lakeformation register-resource \
+  --resource-arn arn:aws:s3:::my-datalake-demo \
+  --use-service-linked-role
+```
+
+This hands S3 location control to Lake Formation. The service-linked role (`AWSServiceRoleForLakeFormationDataAccess`) will be created automatically.
+
+---
+
+### Step 9 — Grant Database & Table Permissions
+
+#### 9.1 Grant Glue Crawler Permission to Create Tables
+
+```bash
+aws lakeformation grant-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:role/GlueDatalakeRole \
+  --resource '{"Database": {"Name": "datalake_db"}}' \
+  --permissions CREATE_TABLE ALTER DROP
+```
+
+#### 9.2 Grant Analyst A — Full Table Access
+
+```bash
+aws lakeformation grant-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-a \
+  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --permissions SELECT DESCRIBE
+```
+
+#### 9.3 Grant Analyst B — Column-Level Access (hide `user_id`)
+
+```bash
+aws lakeformation grant-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
+  --resource '{
+    "TableWithColumns": {
+      "DatabaseName": "datalake_db",
+      "Name": "processed",
+      "ColumnNames": ["order_id", "amount"]
+    }
+  }' \
+  --permissions SELECT
+```
+
+> Analyst B can only see `order_id` and `amount` — `user_id` is invisible in Athena queries.
+
+---
+
+### Step 10 — Row-Level Security with Data Filters
+
+Restrict Analyst B to only see orders where `amount > 50`.
+
+#### 10.1 Create a Data Filter
+
+```bash
+aws lakeformation create-data-cells-filter \
+  --table-data \
+    "DatabaseName=datalake_db,TableName=processed,Name=high-value-orders,\
+RowFilter={FilterExpression='amount > 50'},\
+ColumnWildcard={}"
+```
+
+#### 10.2 Grant the Filter to Analyst B
+
+```bash
+aws lakeformation grant-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
+  --resource '{
+    "DataCellsFilter": {
+      "DatabaseName": "datalake_db",
+      "TableName": "processed",
+      "Name": "high-value-orders"
+    }
+  }' \
+  --permissions SELECT
+```
+
+---
+
+### Step 11 — Verify Permissions in Athena
+
+**As Analyst A** — sees all rows and columns:
+
+```sql
+SELECT * FROM datalake_db.processed LIMIT 10;
+-- Returns: order_id, user_id, amount
+```
+
+**As Analyst B** — sees only filtered rows and allowed columns:
+
+```sql
+SELECT * FROM datalake_db.processed LIMIT 10;
+-- Returns: order_id, amount  (user_id hidden)
+-- Only rows where amount > 50
+```
+
+---
+
+### Step 12 — Audit Access with CloudTrail + Lake Formation Logs
+
+Lake Formation automatically logs all data access decisions to CloudTrail.
+
+```bash
+# Find recent Lake Formation access events
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=EventSource,AttributeValue=lakeformation.amazonaws.com \
+  --max-results 10
+```
+
+Key events to monitor:
+- `GetDataAccess` — triggered every time Athena requests temporary S3 credentials
+- `GrantPermissions` / `RevokePermissions` — permission changes
+
+---
+
+### Step 13 — Revoke Access
+
+```bash
+# Revoke Analyst B's table access
+aws lakeformation revoke-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
+  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --permissions SELECT
+```
+
+---
+
+## Project Structure
+
+```
+data-lake/
+├── README.md
+├── lifecycle.json
+└── glue/
+    └── transform.py
+```
+
+---
+
+## Key Concepts Demonstrated
+
+**Part 1 — Core Data Lake**
+- S3 as a multi-zone data lake (raw → processed)
+- Manual upload with date-based partitioning
+- Schema-on-read with Glue Crawler + Data Catalog
+- Serverless SQL with Athena (no database servers)
+- Columnar format (Parquet) for cost-efficient queries
+- Lifecycle policies for storage cost management
+
+**Part 2 — Lake Formation Governance**
+- Centralized permission model replacing IAM/S3 bucket policies
+- Table-level access per IAM user/role
+- Column-level masking (hide sensitive fields)
+- Row-level filtering via Data Cells Filters
+- Full audit trail via CloudTrail integration
