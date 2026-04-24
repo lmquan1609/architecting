@@ -19,10 +19,12 @@ A collection of hands-on AWS labs covering core services and architectural patte
 | `lab09-crud-lambda-dynamodb` | CRUD API — Lambda + DynamoDB | Lambda, DynamoDB, API Gateway |
 | `lab10-auto-scaling` | Auto Scaling Inventory App | EC2, RDS, ALB, Auto Scaling |
 | `lab11-serverless-todo` | Serverless Todo App | Lambda, DynamoDB, API Gateway, S3 |
-| `lab12-automation` | EC2 Automation Scripts | EC2, AWS SDK (Node.js) |
+| `lab12-automation` | EC2 Automation with Amazon EventBridge | EC2, AWS SDK (Node.js) |
 | `lab12-iac` | Infrastructure as Code | CloudFormation, CDK (TypeScript) |
-| `lab13-cicd` | CI/CD Pipeline | CodePipeline, CodeBuild, CodeDeploy, EFS |
-| `lab14-cloudfront` | CloudFront Distribution | CloudFront, S3 (OAC), EC2, Origin Groups |
+| `lab14-cicd` | CI/CD Pipeline | CodePipeline, CodeBuild, CodeDeploy, EFS |
+| `lab15-cloudfront` | CloudFront Distribution | CloudFront, S3 (OAC), EC2, Origin Groups |
+| `lab16-tbu` | To be updated | To be updated |
+| `lab17-tbu` | To be updated | To be updated |
 | `lab18-capstone` | CRM Application (Capstone) | EC2, RDS, DynamoDB, S3, EFS |
 
 ---
