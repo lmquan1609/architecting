@@ -9,7 +9,7 @@ A collection of hands-on AWS labs covering core services and architectural patte
 | Branch | Lab | Key Services |
 |---|---|---|
 | `lab01-ec2-simple-website` | EC2 Simple Website | EC2, PostgreSQL, Node.js |
-| `lab02-container` | Docker Containerization | Docker, ECR |
+| `lab02-container` | Docker Containerization | Docker, ECR, ECS |
 | `lab03-ebs-image-uploader` | Image Uploader — EBS | EC2, EBS |
 | `lab04-efs-image-uploader` | Image Uploader — EFS | EC2, EFS |
 | `lab05-s3-image-uploader` | Image Uploader — S3 | EC2, S3, IAM |
@@ -95,7 +95,7 @@ Extends the RDS Inventory app with high availability and auto scaling.
 - RDS PostgreSQL in private subnets
 - Launch template with user data for automated app setup
 
-### lab11 — S3 File Manager (Browser Upload)
+### lab11 — S3 File Manager (Browser Upload) - Update Later
 Static website hosted on S3 that uploads files directly from the browser.
 - AWS SDK v3 loaded from CDN
 - Cognito Identity Pool for unauthenticated browser credentials
@@ -114,21 +114,21 @@ Node.js scripts using AWS SDK to automate EC2 instance management.
 - `2-turn-on-ec2-instances.mjs` — start instances
 - `3-change-instance-type.mjs` — resize instance type
 
-### lab12 — Infrastructure as Code (IaC)
+### lab13 — Infrastructure as Code (IaC)
 Three approaches to provisioning a full AWS stack.
 - **CloudFormation (learning)** — 16 progressive demos from skeleton to nested stacks
 - **CloudFormation (production)** — VPC + ALB + ASG + Aurora split into 3 stacks
 - **CDK TypeScript** — same production infra as CDK stacks
 - Architecture: ALB → ASG (t4g.micro) → Aurora PostgreSQL 16
 
-### lab13 — CI/CD Pipeline
+### lab14 — CI/CD Pipeline
 Automated deployment pipeline for the EFS image uploader app.
 - **CodeBuild** — installs dependencies, runs tests (`buildspec.yml`)
 - **CodeDeploy** — deploys to EC2 with lifecycle hooks (`appspec.yml`)
   - `BeforeInstall` → `ApplicationStop` → `AfterInstall` → `ApplicationStart` → `ValidateService`
 - Pipeline: CodeCommit/GitHub → CodeBuild → CodeDeploy → EC2
 
-### lab14 — CloudFront Distribution
+### lab15 — CloudFront Distribution
 CloudFront setup with multiple origins and failover.
 - **Part 1**: Private S3 origin via OAC (no public bucket)
 - **Part 2**: EC2 as second origin for `/images/*` path
@@ -148,4 +148,4 @@ Full CRM application combining multiple AWS storage services.
 - AWS account with appropriate IAM permissions
 - AWS CLI configured (`aws configure`)
 - Node.js 22.x for application labs
-- Docker for lab02
+- Docker
