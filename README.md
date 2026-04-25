@@ -31,7 +31,7 @@ dnf install -y nodejs22 git
 
 ```bash
 cd /home/ec2-user
-git clone -b lab04-ec2-s3 https://github.com/vietaws/architecting.git
+git clone -b lab05-s3-image-uploader https://github.com/vietaws/architecting.git
 cd architecting
 ```
 
@@ -42,7 +42,7 @@ Replace `architecting-demo-xxx` with your S3 bucket name and set your AWS region
 ```bash
 cat > .env <<EOF
 PORT=3001
-S3_BUCKET=architecting-demo-xxx
+S3_BUCKET=lab05-xxx
 AWS_REGION=ap-southeast-1
 EOF
 ```
