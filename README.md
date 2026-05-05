@@ -2,18 +2,23 @@
 
 ## Scenario
 
-An e-commerce company collects raw order and clickstream events. The data lake ingests raw data, transforms it into a queryable format, and serves analytics — all on AWS with S3 as the backbone.
+A company ingests employee records (id, name, email, salary, date of birth) into a data lake. The pipeline cleans invalid records, converts to a queryable format, and enforces fine-grained access control per analyst — all on AWS with S3 as the backbone.
 
 ```
 [Data Sources]
-  App Events (JSON)
-  CSV Uploads (orders)
+  Employee Records (JSON)
         │
         ▼
 [S3 — Raw Zone]          (s3://datalake/raw/)
         │
         ▼
-[AWS Glue — ETL Job]     (clean, convert to Parquet)
+[AWS Glue — Job 1]       (remove dob < 1900-01-01)
+        │
+        ▼
+[S3 — Cleaned Zone]      (s3://datalake/cleaned/)
+        │
+        ▼
+[AWS Glue — Job 2]       (convert to Parquet)
         │
         ▼
 [S3 — Processed Zone]    (s3://datalake/processed/)
@@ -31,8 +36,8 @@ An e-commerce company collects raw order and clickstream events. The data lake i
 
 | Service | Role |
 |---|---|
-| S3 | Storage backbone — raw, processed, failed zones |
-| AWS Glue (ETL + Crawler) | Transform data + auto-catalog schema |
+| S3 | Storage backbone — raw, cleaned, processed, failed zones |
+| AWS Glue (ETL + Crawler) | Job 1: clean data; Job 2: convert to Parquet + auto-catalog schema |
 | Glue Data Catalog | Central metadata store |
 | Amazon Athena | Serverless SQL queries on S3 |
 | IAM | Least-privilege roles per service |
@@ -54,6 +59,7 @@ aws s3api create-bucket \
 
 # Create logical zones as prefixes
 aws s3api put-object --bucket my-datalake-demo --key raw/
+aws s3api put-object --bucket my-datalake-demo --key cleaned/
 aws s3api put-object --bucket my-datalake-demo --key processed/
 aws s3api put-object --bucket my-datalake-demo --key failed/
 aws s3api put-object --bucket my-datalake-demo --key athena-results/
@@ -98,7 +104,7 @@ aws s3api put-bucket-lifecycle-configuration \
 
 ### Step 3 — Create IAM Role
 
-**Glue role** — can read `raw/`, write `processed/`, and update Glue Data Catalog
+**Glue role** — can read `raw/`, write `cleaned/` and `processed/`, and update Glue Data Catalog
 
 ```bash
 aws iam attach-role-policy \
@@ -111,26 +117,64 @@ aws iam attach-role-policy \
 ### Step 4 — Upload Sample Data to Raw Zone
 
 ```bash
-# Create a sample JSON file
-echo '{"order_id":"123","user_id":"456","amount":99.99}' > order1.json
-echo '{"order_id":"124","user_id":"789","amount":45.00}' >> order1.json
+cat > employees.json <<'EOF'
+{"id":"1","name":"Alice","email":"alice@example.com","salary":80000,"dob":"1985-03-12"}
+{"id":"2","name":"Bob","email":"bob@example.com","salary":45000,"dob":"1990-07-22"}
+{"id":"3","name":"Charlie","email":"charlie@example.com","salary":120000,"dob":"1875-01-01"}
+{"id":"4","name":"Diana","email":"diana@example.com","salary":30000,"dob":"1978-11-05"}
+EOF
 
-aws s3 cp order1.json s3://my-datalake-demo/raw/year=2026/month=04/day=24/order1.json
+aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=05/day=05/employees.json
 ```
+
+> Record 3 (Charlie, dob 1875) will be filtered out in the cleaning step.
 
 ---
 
-### Step 5 — Create Glue ETL Job (JSON → Parquet)
+### Step 5 — Create Glue ETL Jobs
+
+#### Job 1 — Clean (raw → cleaned)
+
+1. Go to **AWS Glue → ETL Jobs → Create job**
+2. Choose **Spark script editor**
+3. Use the script at `glue/clean.py` (see below)
+4. IAM role: `GlueDatalakeRole`
+5. Job parameters:
+   - `--SOURCE_PATH` = `s3://my-datalake-demo/raw/`
+   - `--DEST_PATH` = `s3://my-datalake-demo/cleaned/`
+
+`glue/clean.py`:
+
+```python
+import sys
+from awsglue.context import GlueContext
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from pyspark.sql.functions import col, to_date
+
+args = getResolvedOptions(sys.argv, ['SOURCE_PATH', 'DEST_PATH'])
+sc = SparkContext()
+gc = GlueContext(sc)
+
+df = gc.spark_session.read.json(args['SOURCE_PATH'])
+
+# Remove employees with dob before 1900-01-01
+df = df.filter(to_date(col('dob'), 'yyyy-MM-dd') >= '1900-01-01')
+
+df.write.mode("overwrite").json(args['DEST_PATH'])
+```
+
+#### Job 2 — Transform (cleaned → processed)
 
 1. Go to **AWS Glue → ETL Jobs → Create job**
 2. Choose **Spark script editor**
 3. Use the script at `glue/transform.py` (see below)
 4. IAM role: `GlueDatalakeRole`
 5. Job parameters:
-   - `--SOURCE_PATH` = `s3://my-datalake-demo/raw/`
+   - `--SOURCE_PATH` = `s3://my-datalake-demo/cleaned/`
    - `--DEST_PATH` = `s3://my-datalake-demo/processed/`
 
-`glue/transform.py` (minimal):
+`glue/transform.py`:
 
 ```python
 import sys
@@ -171,9 +215,8 @@ After the crawler runs, a table appears in **Glue Data Catalog → datalake_db**
 3. Run:
 
 ```sql
-SELECT order_id, user_id, amount
+SELECT id, name, email, salary, dob
 FROM datalake_db.processed
-WHERE amount > 50
 LIMIT 10;
 ```
 
@@ -183,6 +226,14 @@ LIMIT 10;
 
 Build on top of the existing setup to enforce **table-level**, **column-level**, and **row-level** access control using Lake Formation — replacing broad IAM/S3 bucket policies with granular data permissions.
 
+### Access Matrix
+
+| Analyst | Columns visible | Row filter |
+|---|---|---|
+| analyst-a | id, name, email, salary, dob | all rows |
+| analyst-b | id, name, email, dob | all rows (salary hidden) |
+| analyst-c | id, name, email, salary, dob | only rows where salary < 50000 |
+
 ### Architecture Addition
 
 ```
@@ -191,10 +242,11 @@ Build on top of the existing setup to enforce **table-level**, **column-level**,
         ▼
 [AWS Lake Formation]   ← central permission layer
         │
-   ┌────┴────┐
-   ▼         ▼
-[Analyst A] [Analyst B]
-(full table) (masked columns, filtered rows)
+   ┌────┼────┐
+   ▼    ▼    ▼
+[A]   [B]   [C]
+full  no    salary
+      salary < 50k
 ```
 
 ---
@@ -248,7 +300,7 @@ aws lakeformation grant-permissions \
   --permissions SELECT DESCRIBE
 ```
 
-#### 9.3 Grant Analyst B — Column-Level Access (hide `user_id`)
+#### 9.3 Grant Analyst B — Column-Level Access (hide `salary`)
 
 ```bash
 aws lakeformation grant-permissions \
@@ -257,40 +309,49 @@ aws lakeformation grant-permissions \
     "TableWithColumns": {
       "DatabaseName": "datalake_db",
       "Name": "processed",
-      "ColumnNames": ["order_id", "amount"]
+      "ColumnNames": ["id", "name", "email", "dob"]
     }
   }' \
   --permissions SELECT
 ```
 
-> Analyst B can only see `order_id` and `amount` — `user_id` is invisible in Athena queries.
+> Analyst B can only see `id`, `name`, `email`, `dob` — `salary` is invisible in Athena queries.
+
+#### 9.4 Grant Analyst C — Full Columns, Row-Filtered Access
+
+```bash
+aws lakeformation grant-permissions \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
+  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --permissions SELECT DESCRIBE
+```
 
 ---
 
 ### Step 10 — Row-Level Security with Data Filters
 
-Restrict Analyst B to only see orders where `amount > 50`.
+Restrict Analyst C to only see employees where `salary < 50000`.
 
 #### 10.1 Create a Data Filter
 
 ```bash
 aws lakeformation create-data-cells-filter \
   --table-data \
-    "DatabaseName=datalake_db,TableName=processed,Name=high-value-orders,\
-RowFilter={FilterExpression='amount > 50'},\
+    "DatabaseName=datalake_db,TableName=processed,Name=low-salary-filter,\
+RowFilter={FilterExpression='salary < 50000'},\
 ColumnWildcard={}"
 ```
 
-#### 10.2 Grant the Filter to Analyst B
+#### 10.2 Grant the Filter to Analyst C
 
 ```bash
 aws lakeformation grant-permissions \
-  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
   --resource '{
     "DataCellsFilter": {
       "DatabaseName": "datalake_db",
       "TableName": "processed",
-      "Name": "high-value-orders"
+      "Name": "low-salary-filter"
     }
   }' \
   --permissions SELECT
@@ -300,19 +361,26 @@ aws lakeformation grant-permissions \
 
 ### Step 11 — Verify Permissions in Athena
 
-**As Analyst A** — sees all rows and columns:
+**As Analyst A** — sees all rows and all columns:
 
 ```sql
 SELECT * FROM datalake_db.processed LIMIT 10;
--- Returns: order_id, user_id, amount
+-- Returns: id, name, email, salary, dob  (all rows)
 ```
 
-**As Analyst B** — sees only filtered rows and allowed columns:
+**As Analyst B** — salary column hidden:
 
 ```sql
 SELECT * FROM datalake_db.processed LIMIT 10;
--- Returns: order_id, amount  (user_id hidden)
--- Only rows where amount > 50
+-- Returns: id, name, email, dob  (salary invisible)
+```
+
+**As Analyst C** — all columns, only low-salary rows:
+
+```sql
+SELECT * FROM datalake_db.processed LIMIT 10;
+-- Returns: id, name, email, salary, dob
+-- Only rows where salary < 50000
 ```
 
 ---
@@ -337,9 +405,9 @@ Key events to monitor:
 ### Step 13 — Revoke Access
 
 ```bash
-# Revoke Analyst B's table access
+# Revoke Analyst C's table access
 aws lakeformation revoke-permissions \
-  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
+  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
   --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
   --permissions SELECT
 ```
@@ -353,6 +421,7 @@ data-lake/
 ├── README.md
 ├── lifecycle.json
 └── glue/
+    ├── clean.py
     └── transform.py
 ```
 
@@ -361,7 +430,9 @@ data-lake/
 ## Key Concepts Demonstrated
 
 **Part 1 — Core Data Lake**
-- S3 as a multi-zone data lake (raw → processed)
+- S3 as a multi-zone data lake (raw → cleaned → processed)
+- Job 1 cleans raw JSON: removes employees with dob before 1900
+- Job 2 converts cleaned JSON to Parquet
 - Manual upload with date-based partitioning
 - Schema-on-read with Glue Crawler + Data Catalog
 - Serverless SQL with Athena (no database servers)
@@ -371,6 +442,6 @@ data-lake/
 **Part 2 — Lake Formation Governance**
 - Centralized permission model replacing IAM/S3 bucket policies
 - Table-level access per IAM user/role
-- Column-level masking (hide sensitive fields)
-- Row-level filtering via Data Cells Filters
+- Column-level masking (analyst-b cannot see salary)
+- Row-level filtering via Data Cells Filters (analyst-c sees only salary < 50000)
 - Full audit trail via CloudTrail integration
