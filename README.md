@@ -129,6 +129,15 @@ aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=05/day=05/emp
 
 > Record 3 (Charlie, dob 1875) will be filtered out in the cleaning step.
 
+```bash
+cat > employees.json <<'EOF'
+{"id":"5","name":"Viet","email":"hello@viet.vn","salary":30800,"dob":"2000-03-12","gender":"male"}
+{"id":"6","name":"Thu","email":"thu@example.com","salary":229000,"dob":"1995-09-22","gender":"female"}
+EOF
+
+aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=09/day=18/employees.json
+```
+
 ---
 
 ### Step 5 — Create Glue ETL Jobs
@@ -445,3 +454,4 @@ data-lake/
 - Column-level masking (analyst-b cannot see salary)
 - Row-level filtering via Data Cells Filters (analyst-c sees only salary < 50000)
 - Full audit trail via CloudTrail integration
+`
