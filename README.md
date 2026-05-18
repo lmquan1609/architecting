@@ -141,6 +141,7 @@ aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=09/day=18/emp
 ```bash
 cat > employees.json <<'EOF'
 {"id":"7","name":"Marry","email":"marry@example.com","salary":12000,"dob":"2002-03-15","gender":"female"}
+{"id":"8","name":"Peter","email":"peter@example.com","salary":12000,"dob":"1995-03-15"}
 EOF
 
 aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=10/day=10/employees.json
