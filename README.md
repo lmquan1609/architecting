@@ -53,23 +53,23 @@ A company ingests employee records (id, name, email, salary, date of birth) into
 
 ```bash
 aws s3api create-bucket \
-  --bucket my-datalake-demo \
+  --bucket lab06-data-lake \
   --region ap-southeast-1 \
   --create-bucket-configuration LocationConstraint=ap-southeast-1
 
 # Create logical zones as prefixes
-aws s3api put-object --bucket my-datalake-demo --key raw/
-aws s3api put-object --bucket my-datalake-demo --key cleaned/
-aws s3api put-object --bucket my-datalake-demo --key processed/
-aws s3api put-object --bucket my-datalake-demo --key failed/
-aws s3api put-object --bucket my-datalake-demo --key athena-results/
+aws s3api put-object --bucket lab06-data-lake --key raw/
+aws s3api put-object --bucket lab06-data-lake --key cleaned/
+aws s3api put-object --bucket lab06-data-lake --key processed/
+aws s3api put-object --bucket lab06-data-lake --key failed/
+aws s3api put-object --bucket lab06-data-lake --key athena-results/
 ```
 
 Block all public access:
 
 ```bash
 aws s3api put-public-access-block \
-  --bucket my-datalake-demo \
+  --bucket lab06-data-lake \
   --public-access-block-configuration \
     "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 ```
@@ -80,7 +80,7 @@ aws s3api put-public-access-block \
 
 ```bash
 aws s3api put-bucket-lifecycle-configuration \
-  --bucket my-datalake-demo \
+  --bucket lab06-data-lake \
   --lifecycle-configuration file://lifecycle.json
 ```
 
@@ -165,8 +165,8 @@ aws s3 cp employees.json s3://lab06-data-lake/raw/year=2025/month=09/day=18/empl
 3. Use the script at `glue/clean.py` (see below)
 4. IAM role: `GlueDatalakeRole`
 5. Job parameters:
-   - `--SOURCE_PATH` = `s3://my-datalake-demo/raw/`
-   - `--DEST_PATH` = `s3://my-datalake-demo/cleaned/`
+   - `--SOURCE_PATH` = `s3://lab06-data-lake/raw/`
+   - `--DEST_PATH` = `s3://lab06-data-lake/cleaned/`
 
 `glue/clean.py`:
 
@@ -196,8 +196,8 @@ df.write.mode("overwrite").json(args['DEST_PATH'])
 3. Use the script at `glue/transform.py` (see below)
 4. IAM role: `GlueDatalakeRole`
 5. Job parameters:
-   - `--SOURCE_PATH` = `s3://my-datalake-demo/cleaned/`
-   - `--DEST_PATH` = `s3://my-datalake-demo/processed/`
+   - `--SOURCE_PATH` = `s3://lab06-data-lake/cleaned/`
+   - `--DEST_PATH` = `s3://lab06-data-lake/processed/`
 
 `glue/transform.py`:
 
@@ -224,7 +224,7 @@ aws glue create-crawler \
   --name datalake-processed-crawler \
   --role arn:aws:iam::<account-id>:role/GlueDatalakeRole \
   --database-name datalake_db \
-  --targets '{"S3Targets": [{"Path": "s3://my-datalake-demo/processed/"}]}'
+  --targets '{"S3Targets": [{"Path": "s3://lab06-data-lake/processed/"}]}'
 
 aws glue start-crawler --name datalake-processed-crawler
 ```
@@ -236,7 +236,7 @@ After the crawler runs, a table appears in **Glue Data Catalog → datalake_db**
 ### Step 7 — Query with Athena
 
 1. Go to **Athena → Query editor**
-2. Set workgroup output to `s3://my-datalake-demo/athena-results/`
+2. Set workgroup output to `s3://lab06-data-lake/athena-results/`
 3. Run:
 
 ```sql
@@ -297,7 +297,7 @@ aws lakeformation put-data-lake-settings \
 
 ```bash
 aws lakeformation register-resource \
-  --resource-arn arn:aws:s3:::my-datalake-demo \
+  --resource-arn arn:aws:s3:::lab06-data-lake \
   --use-service-linked-role
 ```
 
