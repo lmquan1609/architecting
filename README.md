@@ -150,7 +150,7 @@ cat > employees.json <<'EOF'
 {"id":"8","name":"Thu","email":"thu@example.com","salary":229000,"dob":"1995-09-22","gender":"female"}
 EOF
 
-aws s3 cp employees.json s3://lab06-data-lake/raw/year=2026/month=09/day=18/employees.json
+aws s3 cp employees.json s3://lab06-data-lake/raw/year=2025/month=09/day=18/employees.json
 
 ```
 
