@@ -124,27 +124,34 @@ cat > employees.json <<'EOF'
 {"id":"4","name":"Diana","email":"diana@example.com","salary":30000,"dob":"1978-11-05"}
 EOF
 
-aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=05/day=05/employees.json
+aws s3 cp employees.json s3://lab06-data-lake/raw/year=2026/month=05/day=05/employees.json
 ```
 
 > Record 3 (Charlie, dob 1875) will be filtered out in the cleaning step.
 
 ```bash
-cat > employees.json <<'EOF'
-{"id":"5","name":"Viet","email":"hello@viet.vn","salary":30800,"dob":"2000-03-12","gender":"male"}
-{"id":"6","name":"Thu","email":"thu@example.com","salary":229000,"dob":"1995-09-22","gender":"female"}
+
+cat > employees1.json <<'EOF'
+{"id":"5","name":"Marry","email":"marry@example.com","salary":12000,"dob":"2002-03-15","gender":"female"}
 EOF
 
-aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=09/day=18/employees.json
+cat > employees2.json <<'EOF'
+{"id":"6","name":"Peter","email":"peter@example.com","salary":12000,"dob":"1995-03-15","gender":"male"}
+EOF
+
+aws s3 cp employees1.json s3://lab06-data-lake/raw/year=2026/month=05/day=05/employees1.json
+
+aws s3 cp employees2.json s3://lab06-data-lake/raw/year=2026/month=05/day=06/employees2.json
 ```
 
 ```bash
 cat > employees.json <<'EOF'
-{"id":"7","name":"Marry","email":"marry@example.com","salary":12000,"dob":"2002-03-15","gender":"female"}
-{"id":"8","name":"Peter","email":"peter@example.com","salary":12000,"dob":"1995-03-15"}
+{"id":"7","name":"Viet","email":"hello@viet.vn","salary":30800,"dob":"2000-03-12","gender":"male"}
+{"id":"8","name":"Thu","email":"thu@example.com","salary":229000,"dob":"1995-09-22","gender":"female"}
 EOF
 
-aws s3 cp employees.json s3://my-datalake-demo/raw/year=2026/month=10/day=10/employees.json
+aws s3 cp employees.json s3://lab06-data-lake/raw/year=2026/month=09/day=18/employees.json
+
 ```
 
 ---
