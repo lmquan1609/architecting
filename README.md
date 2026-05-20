@@ -223,13 +223,13 @@ df.write.mode("overwrite").parquet(args['DEST_PATH'])
 aws glue create-crawler \
   --name datalake-processed-crawler \
   --role arn:aws:iam::<account-id>:role/GlueDatalakeRole \
-  --database-name datalake_db \
+  --database-name lab06 \
   --targets '{"S3Targets": [{"Path": "s3://lab06-data-lake/processed/"}]}'
 
 aws glue start-crawler --name datalake-processed-crawler
 ```
 
-After the crawler runs, a table appears in **Glue Data Catalog → datalake_db**.
+After the crawler runs, a table appears in **Glue Data Catalog → lab06**.
 
 ---
 
@@ -241,7 +241,7 @@ After the crawler runs, a table appears in **Glue Data Catalog → datalake_db**
 
 ```sql
 SELECT id, name, email, salary, dob
-FROM datalake_db.processed
+FROM lab06.processed
 LIMIT 10;
 ```
 
@@ -312,7 +312,7 @@ This hands S3 location control to Lake Formation. The service-linked role (`AWSS
 ```bash
 aws lakeformation grant-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:role/GlueDatalakeRole \
-  --resource '{"Database": {"Name": "datalake_db"}}' \
+  --resource '{"Database": {"Name": "lab06"}}' \
   --permissions CREATE_TABLE ALTER DROP
 ```
 
@@ -321,7 +321,7 @@ aws lakeformation grant-permissions \
 ```bash
 aws lakeformation grant-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-a \
-  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --resource '{"Table": {"DatabaseName": "lab06", "Name": "processed"}}' \
   --permissions SELECT DESCRIBE
 ```
 
@@ -332,7 +332,7 @@ aws lakeformation grant-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-b \
   --resource '{
     "TableWithColumns": {
-      "DatabaseName": "datalake_db",
+      "DatabaseName": "lab06",
       "Name": "processed",
       "ColumnNames": ["id", "name", "email", "dob"]
     }
@@ -347,7 +347,7 @@ aws lakeformation grant-permissions \
 ```bash
 aws lakeformation grant-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
-  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --resource '{"Table": {"DatabaseName": "lab06", "Name": "processed"}}' \
   --permissions SELECT DESCRIBE
 ```
 
@@ -362,7 +362,7 @@ Restrict Analyst C to only see employees where `salary < 50000`.
 ```bash
 aws lakeformation create-data-cells-filter \
   --table-data \
-    "DatabaseName=datalake_db,TableName=processed,Name=low-salary-filter,\
+    "DatabaseName=lab06,TableName=processed,Name=low-salary-filter,\
 RowFilter={FilterExpression='salary < 50000'},\
 ColumnWildcard={}"
 ```
@@ -374,7 +374,7 @@ aws lakeformation grant-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
   --resource '{
     "DataCellsFilter": {
-      "DatabaseName": "datalake_db",
+      "DatabaseName": "lab06",
       "TableName": "processed",
       "Name": "low-salary-filter"
     }
@@ -389,21 +389,21 @@ aws lakeformation grant-permissions \
 **As Analyst A** — sees all rows and all columns:
 
 ```sql
-SELECT * FROM datalake_db.processed LIMIT 10;
+SELECT * FROM lab06.processed LIMIT 10;
 -- Returns: id, name, email, salary, dob  (all rows)
 ```
 
 **As Analyst B** — salary column hidden:
 
 ```sql
-SELECT * FROM datalake_db.processed LIMIT 10;
+SELECT * FROM lab06.processed LIMIT 10;
 -- Returns: id, name, email, dob  (salary invisible)
 ```
 
 **As Analyst C** — all columns, only low-salary rows:
 
 ```sql
-SELECT * FROM datalake_db.processed LIMIT 10;
+SELECT * FROM lab06.processed LIMIT 10;
 -- Returns: id, name, email, salary, dob
 -- Only rows where salary < 50000
 ```
@@ -433,7 +433,7 @@ Key events to monitor:
 # Revoke Analyst C's table access
 aws lakeformation revoke-permissions \
   --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
-  --resource '{"Table": {"DatabaseName": "datalake_db", "Name": "processed"}}' \
+  --resource '{"Table": {"DatabaseName": "lab06", "Name": "processed"}}' \
   --permissions SELECT
 ```
 
