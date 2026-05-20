@@ -345,8 +345,7 @@ aws lakeformation grant-permissions \
 #### 9.4 Grant Analyst C — Full Columns, Row-Filtered Access
 
 ```bash
-```bash
-  aws lakeformation create-data-cells-filter \
+aws lakeformation create-data-cells-filter \
     --table-data '{
       "DatabaseName": "lab06",
       "TableName": "processed",
@@ -355,7 +354,7 @@ aws lakeformation grant-permissions \
       "ColumnWildcard": {}
     }'
 ```
-```
+
 #### 9.5 Permissions for Analysts
 
 With Lake Formation handling data permissions, the analysts only need IAM permissions to call Athena and read the catalog — Lake Formation enforces what data they actually see. Here are the minimal policies:
