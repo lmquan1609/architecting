@@ -421,41 +421,8 @@ The difference between analysts is not in IAM — it's entirely in Lake Formatio
 
 ---
 
-### Step 10 — Row-Level Security with Data Filters
 
-Restrict Analyst C to only see employees where `salary < 50000`.
-
-#### 10.1 Create a Data Filter
-
-```bash
-  aws lakeformation create-data-cells-filter \
-    --table-data '{
-      "DatabaseName": "lab06",
-      "TableName": "processed",
-      "Name": "low-salary-filter",
-      "RowFilter": {"FilterExpression": "salary < 50000"},
-      "ColumnWildcard": {}
-    }'
-```
-
-#### 10.2 Grant the Filter to Analyst C
-
-```bash
-aws lakeformation grant-permissions \
-  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
-  --resource '{
-    "DataCellsFilter": {
-      "DatabaseName": "lab06",
-      "TableName": "processed",
-      "Name": "low-salary-filter"
-    }
-  }' \
-  --permissions SELECT
-```
-
----
-
-### Step 11 — Verify Permissions in Athena
+### Step 10 — Verify Permissions in Athena
 
 **As Analyst A** — sees all rows and all columns:
 
@@ -481,7 +448,7 @@ SELECT * FROM lab06.processed LIMIT 10;
 
 ---
 
-### Step 12 — Audit Access with CloudTrail + Lake Formation Logs
+### Step 11 — Audit Access with CloudTrail + Lake Formation Logs
 
 Lake Formation automatically logs all data access decisions to CloudTrail.
 
@@ -498,7 +465,7 @@ Key events to monitor:
 
 ---
 
-### Step 13 — Revoke Access
+### Step 12 — Revoke Access
 
 ```bash
 # Revoke Analyst C's table access
