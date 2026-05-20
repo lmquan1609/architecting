@@ -345,10 +345,16 @@ aws lakeformation grant-permissions \
 #### 9.4 Grant Analyst C — Full Columns, Row-Filtered Access
 
 ```bash
-aws lakeformation grant-permissions \
-  --principal DataLakePrincipalIdentifier=arn:aws:iam::<account-id>:user/analyst-c \
-  --resource '{"Table": {"DatabaseName": "lab06", "Name": "processed"}}' \
-  --permissions SELECT DESCRIBE
+```bash
+  aws lakeformation create-data-cells-filter \
+    --table-data '{
+      "DatabaseName": "lab06",
+      "TableName": "processed",
+      "Name": "low-salary-filter",
+      "RowFilter": {"FilterExpression": "salary < 50000"},
+      "ColumnWildcard": {}
+    }'
+```
 ```
 #### 9.5 Permissions for Analysts
 
