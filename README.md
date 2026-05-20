@@ -350,6 +350,72 @@ aws lakeformation grant-permissions \
   --resource '{"Table": {"DatabaseName": "lab06", "Name": "processed"}}' \
   --permissions SELECT DESCRIBE
 ```
+#### 9.5 Permissions for Analysts
+
+With Lake Formation handling data permissions, the analysts only need IAM permissions
+  to call Athena and read the catalog — Lake Formation enforces what data they actually
+  see. Here are the minimal policies:
+  
+  Shared base for all three analysts (Athena + Glue Catalog read):
+  
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "athena:StartQueryExecution",
+          "athena:GetQueryExecution",
+          "athena:GetQueryResults",
+          "athena:StopQueryExecution",
+          "athena:GetWorkGroup"
+        ],
+        "Resource": "arn:aws:athena:ap-southeast-1:<account-id>:workgroup/primary"
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "glue:GetDatabase",
+          "glue:GetTable",
+          "glue:GetPartitions"
+        ],
+        "Resource": [
+          "arn:aws:glue:ap-southeast-1:<account-id>:catalog",
+          "arn:aws:glue:ap-southeast-1:<account-id>:database/lab06",
+          "arn:aws:glue:ap-southeast-1:<account-id>:table/lab06/processed"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject"
+        ],
+        "Resource": "arn:aws:s3:::lab06-data-lake/athena-results/*"
+      },
+      {
+        "Effect": "Allow",
+        "Action": "s3:GetBucketLocation",
+        "Resource": "arn:aws:s3:::lab06-data-lake"
+      },
+      {
+        "Effect": "Allow",
+        "Action": "lakeformation:GetDataAccess",
+        "Resource": "*"
+      }
+    ]
+  }
+  
+  This same policy applies to analyst-a, analyst-b, and analyst-c. No S3 GetObject on
+  processed/ is needed — Lake Formation's service-linked role vends temporary credentials
+  to Athena directly, so analysts never touch the raw S3 data.
+  
+  The difference between analysts is not in IAM — it's entirely in Lake Formation grants
+  (Steps 9–10 in the guide):
+  
+  - analyst-a → full table SELECT via grant-permissions
+  - analyst-b → column-restricted SELECT (no salary) via TableWithColumns
+  - analyst-c → row-filtered SELECT via DataCellsFilter
 
 ---
 
