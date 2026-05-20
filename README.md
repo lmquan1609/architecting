@@ -423,11 +423,14 @@ Restrict Analyst C to only see employees where `salary < 50000`.
 #### 10.1 Create a Data Filter
 
 ```bash
-aws lakeformation create-data-cells-filter \
-  --table-data \
-    "DatabaseName=lab06,TableName=processed,Name=low-salary-filter,\
-RowFilter={FilterExpression='salary < 50000'},\
-ColumnWildcard={}"
+  aws lakeformation create-data-cells-filter \
+    --table-data '{
+      "DatabaseName": "lab06",
+      "TableName": "processed",
+      "Name": "low-salary-filter",
+      "RowFilter": {"FilterExpression": "salary < 50000"},
+      "ColumnWildcard": {}
+    }'
 ```
 
 #### 10.2 Grant the Filter to Analyst C
