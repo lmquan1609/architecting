@@ -1,151 +1,116 @@
-# Image Upload Application - EFS Storage
+# AWS CI/CD Demo Guide
 
-Simple image upload application that stores files on Amazon EFS and displays AWS metadata.
+A hands-on guide for implementing CI/CD pipelines using **AWS CodePipeline**, **CodeBuild**, and **CodeDeploy** across three common deployment scenarios.
 
-## Features
-- Upload images to Amazon EFS (`/mnt/efs`)
-- Display AWS region and instance ID
-- View uploaded images in grid layout
-- Delete images
-- Shared storage across multiple EC2 instances
+- **Repo:** `vietaws/architecting` · **Branch:** `lab14-cicd`
+- **App:** Node.js + Express on port 3001
+- **OS:** Amazon Linux 2023 (Graviton / t4g.micro) for EC2 use cases
 
-## Prerequisites
-- Amazon EFS file system created in same VPC
-- Security group allowing NFS traffic (port 2049) from EC2 to EFS
-- EC2 instances in same subnets as EFS mount targets
+---
 
-## Deployment Instructions
+## Use Cases
 
-### 1. Update system and install dependencies
+### Use Case 1 — Single EC2 (In-Place)
 
-```bash
-sudo -i
-dnf update -y
-dnf install -y nodejs22 git amazon-efs-utils
+> One EC2 instance running a Node.js web server. No load balancer.
+
+**Strategy:** CodeDeploy in-place deployment. The CodeDeploy agent on the EC2 stops the running app, installs the new revision, and restarts it.
+
+| | |
+|---|---|
+| Deployment type | In-place |
+| Downtime | Brief (stop → start) |
+| Rollback | Re-deploy previous revision |
+| Best for | Dev/test environments, simple demos |
+
+📄 [Full Guide](./use-case-1-single-ec2-inplace.md)
+
+---
+
+### Use Case 2 — ASG + ALB (Rolling & Blue/Green)
+
+> 4 EC2 instances in an Auto Scaling Group behind an Application Load Balancer.
+
+Two strategies are covered side by side:
+
+| | In-Place Rolling | Blue/Green |
+|---|---|---|
+| Deployment type | In-place, 1 instance at a time | New ASG (green fleet) |
+| Downtime | None (ALB drains each instance) | None (ALB cutover) |
+| Rollback | Re-deploy old revision | Instant — shift ALB back to blue |
+| Extra cost | None | Doubles EC2 count during deploy |
+| Best for | Cost-sensitive, simple rollout | Production, safe cutover |
+
+📄 [Full Guide](./use-case-2-asg-alb-rolling-bluegreen.md)
+
+---
+
+### Use Case 3 — ECS Fargate + ALB (Full Cutover & Canary)
+
+> Existing ECS Fargate service behind an ALB. CodeBuild builds and pushes a Docker image to ECR; CodeDeploy handles the blue/green task set swap.
+
+Two strategies are covered side by side:
+
+| | Full Cutover | Canary 10% / 5 min |
+|---|---|---|
+| Deployment config | `ECSAllAtOnce` | `ECSCanary10Percent5Minutes` |
+| Traffic shift | 100% immediately | 10% for 5 min → 100% |
+| Rollback | Instant (within termination window) | Instant — only 10% of users affected |
+| Blast radius | All users | 10% of users |
+| Best for | Fast releases, low-risk changes | High-risk changes, gradual validation |
+
+📄 [Full Guide](./use-case-3-ecs-fargate-cutover-canary.md)
+
+---
+
+## Pipeline Architecture
+
+All three use cases share the same pipeline structure:
+
+```
+GitHub (push to lab14-cicd)
+        │
+        ▼
+  CodePipeline
+        │
+        ├── Source Stage   — pulls code from GitHub via CodeStar Connection
+        │
+        ├── Build Stage    — CodeBuild: runs tests, builds artifact or Docker image
+        │
+        └── Deploy Stage   — CodeDeploy: deploys to EC2 / ASG / ECS
 ```
 
-### 2. Mount EFS file system
+---
 
-Replace `fs-xxxxxxxxx` with your EFS ID:
+## File Structure (Repo)
 
-```bash
-EFS_ID=fs-xxxxxxxxx
-mkdir -p /mnt/efs
-mount -t efs -o tls ${EFS_ID}:/ /mnt/efs
+```
+vietaws/architecting (branch: lab14-cicd)
+├── app/
+│   ├── index.js          # Express app
+│   └── package.json
+├── scripts/              # EC2 lifecycle hooks (Use Cases 1 & 2)
+│   ├── stop_server.sh
+│   ├── install_dependencies.sh
+│   └── start_server.sh
+├── specs/                # Build & deploy specs (Use Cases 2 & 3)
+│   ├── appspec.yml       # CodeDeploy deployment spec
+│   ├── buildspec.yml     # CodeBuild build spec
+│   └── taskdef.json      # ECS task definition template (Use Case 3 only)
+├── Dockerfile            # Use Case 3 only
+├── appspec.yml           # CodeDeploy spec (Use Case 1 only)
+└── buildspec.yml         # CodeBuild spec (Use Case 1 only)
 ```
 
-### 3. Add to /etc/fstab for persistent mount
+---
 
-```bash
-echo "${EFS_ID}:/ /mnt/efs efs _netdev,tls 0 0" >> /etc/fstab
-```
+## Quick Comparison
 
-### 4. Set permissions
-
-```bash
-chown ec2-user:ec2-user /mnt/efs
-chmod 755 /mnt/efs
-```
-
-### 5. Clone application
-
-```bash
-cd /home/ec2-user
-git clone -b lab05-efs-image-uploader https://github.com/vietaws/architecting.git
-cd architecting
-```
-
-### 6. Create .env file
-
-```bash
-cat > .env <<EOF
-PORT=3001
-UPLOAD_DIR=/mnt/efs
-EOF
-```
-
-### 7. Install dependencies
-
-```bash
-npm install
-chown -R ec2-user:ec2-user /home/ec2-user/architecting
-```
-
-### 8. Create systemd service
-
-```bash
-cat > /etc/systemd/system/demo-app.service <<'EOFS'
-[Unit]
-Description=Image Upload Application
-After=network.target
-
-[Service]
-Type=simple
-User=ec2-user
-WorkingDirectory=/home/ec2-user/architecting
-EnvironmentFile=/home/ec2-user/architecting/.env
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=demo-app
-
-[Install]
-WantedBy=multi-user.target
-EOFS
-```
-
-### 9. Enable and start service
-
-```bash
-systemctl daemon-reload
-systemctl enable demo-app
-systemctl start demo-app
-systemctl status demo-app --no-pager
-```
-
-### 10. View logs
-
-```bash
-# Real-time logs
-journalctl -u demo-app -f
-
-# Recent logs
-journalctl -u demo-app -n 50
-```
-
-## Verify EFS Mount
-
-```bash
-df -h | grep efs
-ls -la /mnt/efs
-```
-
-## API Endpoints
-
-- `GET /api/metadata` - Get AWS region and instance ID
-- `GET /api/images` - List all uploaded images
-- `POST /api/images` - Upload image (multipart/form-data, max 10MB)
-- `DELETE /api/images/:name` - Delete image
-- `GET /uploads/:filename` - Serve image file
-
-## Environment Variables
-
-- `PORT` - Server port (default: 3000)
-- `UPLOAD_DIR` - Image storage directory (default: /mnt/efs)
-
-## Testing
-
-1. Access application via browser: `http://<instance-ip>:3001`
-2. Upload an image
-3. Verify region and instance ID are displayed
-4. Check images are stored in `/mnt/efs`
-5. Test delete functionality
-6. Upload from one EC2 instance and verify visibility from another instance
-
-## EFS Benefits
-- Shared storage across multiple EC2 instances
-- Automatic scaling
-- High availability and durability
-- No capacity planning required
+| | UC1: Single EC2 | UC2: ASG + ALB | UC3: ECS Fargate |
+|---|---|---|---|
+| Infrastructure | 1 EC2 | 4 EC2 + ASG + ALB | Fargate + ALB |
+| Deployment | In-place | Rolling or Blue/Green | Full cutover or Canary |
+| Zero downtime | ❌ | ✅ | ✅ |
+| Instant rollback | ❌ | ✅ (B/G only) | ✅ |
+| Container-based | ❌ | ❌ | ✅ |
+| Complexity | Low | Medium | Medium–High |

@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+            - echo "installing node js modules..."
+  pre_build:
+        commands: 
+            - echo "we are in the pre build phase"
+  build:
+    commands:
+      - echo "we are in the build block"
+      - echo "Running tests..."
+      - cd app && npm install && npm test --if-present
+      # - grep -Fq "Congratulations" index.html
+  post_build:
+    commands:
+      - echo "Build complete"
+
+artifacts:
+  files:
+    - app/**/*
+    - scripts/**/*
+    - appspec.yml
+  discard-paths: no
