@@ -14,7 +14,7 @@ phases:
       - echo "we are in the build block"
       - echo "Running tests..."
       - cd app && npm install && npm test --if-present
-      # - grep -Fq "Hello" index.js && echo "Test passed!" || (echo "Test failed!" && exit 1)
+      - grep -Fq "Hello" index.js && echo "Test passed!" || (echo "Test failed!" && exit 1)
   post_build:
     commands:
       # - cd .. && mv specs/appspec.yaml ./appspec.yml  # move appspec.yaml to the root for packaging
