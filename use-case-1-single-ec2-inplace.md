@@ -171,6 +171,9 @@ hooks:
       runas: ec2-user
 ```
 
+> CodeDeploy Agent Comamnds:
+- Check service running: systemctl status codedeploy-agent
+- View logs: sudo tail -f /var/log/aws/codedeploy-agent/codedeploy-agent.log
 ---
 
 ## Step 5: `buildspec.yml`

@@ -7,16 +7,24 @@ files:
 
 hooks:
   ApplicationStop:
-    - location: scripts/stop_server.sh
+    - location: scripts/1-stop_server.sh
       timeout: 30
+      runas: root
+  BeforeInstall:
+    - location: scripts/2-prep.sh
+      timeout: 300
       runas: root
 
   AfterInstall:
-    - location: scripts/install_dependencies.sh
+    - location: scripts/3-after_install.sh
       timeout: 120
       runas: ec2-user
 
   ApplicationStart:
-    - location: scripts/start_server.sh
+    - location: scripts/4-start_server.sh
       timeout: 30
       runas: ec2-user
+  
+  ValidateService:
+    - location: scripts/5-validate_service.sh
+      timeout: 300

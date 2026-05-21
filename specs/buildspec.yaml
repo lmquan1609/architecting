@@ -15,6 +15,7 @@ phases:
       - echo "Running tests..."
       - cd app && npm install && npm test --if-present
       # - grep -Fq "Hello" index.js && echo "Test passed!" || (echo "Test failed!" && exit 1)
+      # mv specs/appspec.yaml ./appspec.yml  # move appspec.yaml to the root for packaging
   post_build:
     commands:
       - echo "Build complete"
@@ -23,6 +24,6 @@ artifacts:
   files:
     - app/**/*
     - scripts/**/*
-    - specs/appspec.yaml
+    - appspec.yml
   name: my-artifact-$(date +%Y-%m-%d-%H-%M-%S).zip
   discard-paths: no
