@@ -4,6 +4,7 @@ os: linux
 files:
   - source: app/
     destination: /home/ec2-user/architecting/app
+    file_exists_behavior: OVERWRITE
 
 hooks:
   ApplicationStop:
