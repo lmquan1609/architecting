@@ -14,7 +14,7 @@ phases:
       - echo "we are in the build block"
       - echo "Running tests..."
       - cd app && npm install && npm test --if-present
-      # - grep -Fq "Congratulations" index.html
+      # - grep -Fq "Hello" index.js && echo "Test passed!" || (echo "Test failed!" && exit 1)
   post_build:
     commands:
       - echo "Build complete"
@@ -23,5 +23,6 @@ artifacts:
   files:
     - app/**/*
     - scripts/**/*
-    - appspec.yml
+    - specs/appspec.yaml
+  name: my-artifact-$(date +%Y-%m-%d) 
   discard-paths: no

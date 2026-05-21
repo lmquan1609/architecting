@@ -8,7 +8,6 @@
 | App | Node.js + Express on port 3001 |
 | Strategy | CodeDeploy in-place |
 | Pipeline | GitHub → CodeBuild → CodeDeploy |
-| Repo | `vietaws/architecting` branch `lab14-cicd` |
 
 **Flow:**
 ```
@@ -36,14 +35,15 @@ Internet
 SSH into the EC2 and run:
 
 ```bash
-sudo dnf install -y ruby wget
+sudo -i
+dnf install -y ruby wget
 cd /home/ec2-user
 wget https://aws-codedeploy-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/latest/install
 chmod +x ./install
-sudo ./install auto
-sudo systemctl enable codedeploy-agent
-sudo systemctl start codedeploy-agent
-sudo systemctl status codedeploy-agent
+./install auto
+systemctl enable codedeploy-agent
+systemctl start codedeploy-agent
+systemctl status codedeploy-agent
 ```
 
 > Replace `ap-southeast-1` with your actual AWS region.
@@ -61,26 +61,12 @@ Add a tag so CodeDeploy can identify the target:
 
 | Key | Value |
 |---|---|
-| `Environment` | `production` |
-| `App` | `webserver` |
+| `env` | `production` |
+| `layer` | `webserver` |
 
 ---
 
 ## Step 2: Application Repository Structure
-
-In your GitHub repo (`vietaws/architecting`, branch `lab14-cicd`):
-
-```
-├── app/
-│   ├── index.js
-│   └── package.json
-├── scripts/
-│   ├── install_dependencies.sh
-│   ├── start_server.sh
-│   └── stop_server.sh
-├── appspec.yml
-└── buildspec.yml
-```
 
 ### `app/package.json`
 
@@ -230,7 +216,7 @@ artifacts:
 2. Service role: *(your CodeDeploy service role)*
 3. Deployment type: **In-place**
 4. Environment configuration: **Amazon EC2 instances**
-   - Tag key: `App`, value: `webserver`
+   - Tag key: `app`, value: `webserver`
 5. Deployment settings: `CodeDeployDefault.AllAtOnce` *(single instance)*
 6. Load balancer: **Disable** *(no ALB in this use case)*
 
