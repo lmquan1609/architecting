@@ -21,7 +21,7 @@ EOF
 npm install
 
 # Set permissions
-chown -R ec2-user:ec2-user /home/ec2-user/architecting/app
+chown -R ec2-user:ec2-user /home/ec2-user/architecting
 
 # Create systemd service
 cat > /etc/systemd/system/demo-app.service <<'EOFS'
@@ -32,9 +32,9 @@ After=network.target
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/architecting/app
-EnvironmentFile=/home/ec2-user/architecting/app/.env
-ExecStart=/usr/bin/node index.js
+WorkingDirectory=/home/ec2-user/architecting
+EnvironmentFile=/home/ec2-user/architecting/.env
+ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 StandardOutput=journal
