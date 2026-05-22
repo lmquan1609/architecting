@@ -46,6 +46,22 @@ ALB
 
 ## Prerequisites
 
+### EC2 Instance Role (IAM)
+
+The EC2 instances in the ASG must have an IAM instance profile with the following permissions:
+
+| Permission | Purpose |
+|---|---|
+| `ec2messages:*` | CodeDeploy agent communication via SSM |
+| `ssmmessages:*` | SSM session manager (optional but recommended) |
+| `ssm:UpdateInstanceInformation` | SSM agent heartbeat |
+
+Attach the AWS managed policy **`AmazonSSMManagedInstanceCore`** to the instance role for the above.
+
+Additionally, the app fetches the EC2 instance ID from the [Instance Metadata Service (IMDSv2)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) — no IAM permission is required for IMDS access. Ensure **IMDSv2 is enabled** on the launch template (it is the default on Amazon Linux 2023).
+
+> The CodeDeploy agent also requires the instance role to have `s3:GetObject` on the S3 bucket where CodePipeline stores artifacts. Attach **`AmazonS3ReadOnlyAccess`** or a scoped-down policy targeting your artifact bucket.
+
 ### ALB & Target Group
 
 Ensure you have:
