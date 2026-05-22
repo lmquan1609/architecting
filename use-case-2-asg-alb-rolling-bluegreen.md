@@ -90,14 +90,14 @@ Same repo as Use Case 1 (`vietaws/architecting`, branch `lab14-cicd`). The files
 │   ├── start_server.sh
 │   └── stop_server.sh
 └── specs/
-    ├── appspec.yml
-    └── buildspec.yml
+    ├── appspec.yaml
+    └── buildspec.yaml
 ```
 
 ### `app/index.js`
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 const PORT = 3001;
 
@@ -151,7 +151,7 @@ exit 0
 
 ---
 
-## Step 3: `specs/appspec.yml`
+## Step 3: `specs/appspec.yaml`
 
 ```yaml
 version: 0.0
@@ -180,7 +180,7 @@ hooks:
 
 ---
 
-## Step 4: `specs/buildspec.yml`
+## Step 4: `specs/buildspec.yaml`
 
 ```yaml
 version: 0.2
@@ -305,7 +305,7 @@ Before running a blue/green deployment, create a second target group:
    - Provider: **AWS CodeBuild**
    - Project name: `demo-build-uc2` *(create once, reuse for both pipelines)*
      - Environment: Managed image, Amazon Linux, `aws/codebuild/amazonlinux2-aarch64-standard:3.0`
-     - Buildspec: `specs/buildspec.yml`
+     - Buildspec: `specs/buildspec.yaml`
 5. **Deploy stage**
    - Provider: **AWS CodeDeploy**
    - Application: `demo-webserver-uc2`
