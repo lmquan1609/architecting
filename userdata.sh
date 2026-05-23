@@ -11,6 +11,7 @@ dnf install -y nodejs22 git
 cd /home/ec2-user
 git clone -b lab14-cicd https://github.com/vietaws/architecting.git
 cd architecting/app
+# mv -f index-base.js index.js
 
 # Create .env file (update DB_HOST with your database endpoint)
 cat > .env <<EOF
