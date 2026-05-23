@@ -2,11 +2,12 @@
 
 A collection of hands-on AWS labs covering core services and architectural patterns.
 
-Link to buy this full course: https://viet.vn/udemy/architecting
-See more courses on my website: https://viet.vn
+📚 Link to buy this full course: https://viet.vn/udemy/architecting
 
-Thank you for your supporting my developments!
-Viet Tran
+✅ See more courses on my website: https://viet.vn
+
+Thank you for your supporting my developments! 🚀🚀🚀
+Viet Tran 
 
 hello@viet.vn
 
