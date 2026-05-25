@@ -29,8 +29,8 @@ phases:
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
-      - echo Pushing image to ECR...
-      - docker push $IMAGE_URI
+      # - echo Pushing image to ECR...
+      # - docker push $IMAGE_URI
       - echo Writing imagedefinitions.json...
       - printf '[{"name":"%s","imageUri":"%s"}]' $ECS_SVC $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
       - cat imagedefinitions.json
