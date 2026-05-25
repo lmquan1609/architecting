@@ -5,7 +5,7 @@ env:
     AWS_ACCOUNT_ID: "274595021951"       # replace with your account ID
     AWS_REGION: "ap-southeast-1"         # replace with your region
     ECR_REPO: "public/demo-lab14"      # replace with your ECR repo name
-    ECS_SVC: "my-service" # must match container name in task definition
+    ECS_SVC: "my-td-fargate-service-h86hj8jg" # must match container name in task definition
     DOCKER_BUILDKIT: "1" # Enable BuildKit for better performance and multi-platform builds
 
 phases:
