@@ -29,10 +29,9 @@ phases:
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
-      # - echo Pushing image to ECR...
-      # - docker push $IMAGE_URI
+      - IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
       - echo Writing imagedefinitions.json...
-      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imagedefinitions.json
       - cat imagedefinitions.json
       - pwd
       - echo Moving imagedefinitions.json to $CODEBUILD_SRC_DIR...
