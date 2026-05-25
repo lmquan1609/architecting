@@ -5,7 +5,7 @@ WORKDIR /app
 
 # install dependencies 
 # A Wildcard to make sure that we will copy both package.json and package-lock.json
-COPY app/package*.json /app/
+COPY package*.json .
 
 RUN npm install
 
