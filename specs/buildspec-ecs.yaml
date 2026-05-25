@@ -21,7 +21,10 @@ phases:
       - ls -al
       - rm -f index-base.js
       - mv -f index-ecs.js index.js
-      - docker build -t $IMAGE_URI .  
+      - mv -f package-ecs.json package.json
+      - echo Check docker buildx version and build image for multiple platforms...
+      - docker buildx version
+      - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI .  
   post_build:
     commands:
       - echo Pushing image to ECR...
