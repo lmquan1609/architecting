@@ -32,5 +32,4 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-  name: my-artifact-$(date +%Y-%m-%d-%H-%M-%S).zip
   discard-paths: yes
