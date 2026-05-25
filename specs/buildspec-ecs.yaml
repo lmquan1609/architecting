@@ -5,7 +5,7 @@ env:
     AWS_ACCOUNT_ID: "274595021951"       # replace with your account ID
     AWS_REGION: "ap-southeast-1"         # replace with your region
     ECR_REPO: "public/demo-lab14"      # replace with your ECR repo name
-    ECS_SVC: "my-td-fargate-service-h86hj8jg" # must match container name in task definition
+    CONTAINER_NAME: "example" # must match container name in task definition
     DOCKER_BUILDKIT: "1" # Enable BuildKit for better performance and multi-platform builds
 
 phases:
@@ -32,7 +32,7 @@ phases:
       # - echo Pushing image to ECR...
       # - docker push $IMAGE_URI
       - echo Writing imagedefinitions.json...
-      - printf '[{"name":"%s","imageUri":"%s"}]' $ECS_SVC $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
       - cat imagedefinitions.json
 
 artifacts:
