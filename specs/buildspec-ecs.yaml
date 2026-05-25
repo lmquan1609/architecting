@@ -32,4 +32,4 @@ phases:
 artifacts:
   files:
     - imagedefinitions.json
-  discard-paths: yes
+  iscard-paths: yes   # Optional: Prevents original local folder structures from being created inside the zip file
