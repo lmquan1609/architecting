@@ -6,6 +6,7 @@ env:
     AWS_REGION: "ap-southeast-1"         # replace with your region
     ECR_REPO: "public/demo-lab14"      # replace with your ECR repo name
     ECS_SVC: "my-service" # must match container name in task definition
+    DOCKER_BUILDKIT: "1" # Enable BuildKit for better performance and multi-platform builds
 
 phases:
   pre_build:
@@ -14,6 +15,7 @@ phases:
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
       - IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
+      - docker buildx create --use --name mybuilder 
   build:
     commands:
       - echo Building Docker image...
