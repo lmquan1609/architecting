@@ -10,9 +10,6 @@ COPY package*.json .
 
 RUN npm install
 
-RUN rm -f index-base.js
-RUN mv -f index-ecs.js index.js
-
 # Bundle app source
 COPY . . 
 

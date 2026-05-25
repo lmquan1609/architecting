@@ -18,7 +18,10 @@ phases:
     commands:
       - echo Building Docker image...
       - cd app/
-      - docker build -t $IMAGE_URI .
+      - ls -al
+      - rm -f index-base.js
+      - mv -f index-ecs.js index.js
+      - docker build -t $IMAGE_URI .  
   post_build:
     commands:
       - echo Pushing image to ECR...
