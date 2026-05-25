@@ -64,7 +64,7 @@ The ASG must use a Launch Template that:
 
 ```bash
 #!/bin/bash
-dnf install -y ruby wget nodejs npm
+dnf install -y ruby wget nodejs22 npm git
 cd /tmp
 wget https://aws-codedeploy-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/latest/install
 chmod +x ./install
