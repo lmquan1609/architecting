@@ -24,7 +24,7 @@ phases:
       - mv -f package-ecs.json package.json
       - echo Check docker buildx version and build image for multiple platforms...
       - docker buildx version
-      - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI .  
+      - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
       - echo Pushing image to ECR...
