@@ -267,6 +267,34 @@ Batch 4: Deregister EC2-4 from ALB → deploy → health check → re-register
    - Target group 1 (blue): `demo-uc2-tg-blue`
    - Target group 2 (green): `demo-uc2-tg-green` *(create this target group in advance)*
 
+
+JSON Policy for Blue/Green Deployment - CodeDeploy IAM Role:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateTags",
+                "ec2:RunInstances"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": "arn:aws:iam::123456789012:role/ec2-instance-role"
+        }
+    ]
+}
+```
+
 **What happens during blue/green deploy:**
 ```
 1. CodeDeploy creates new ASG (green) by copying launch template from blue ASG
