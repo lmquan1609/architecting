@@ -9,11 +9,11 @@ COPY app/package*.json /app/
 
 RUN npm install
 
-RUN rm -f app/index-base.js
-RUN mv -f app/index-ecs.js app/index.js
+RUN rm -f index-base.js
+RUN mv -f index-ecs.js index.js
 
 # Bundle app source
-COPY app/ . 
+COPY . . 
 
 EXPOSE 3001
 CMD ["npm", "start"]
