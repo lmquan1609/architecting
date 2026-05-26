@@ -32,18 +32,18 @@ phases:
     commands:
       - echo Build completed. Image URI
       - echo $IMAGE_URI
-      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imagedefinitions.json
-      - cat imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imageDetail.json
+      - cat imageDetail.json
       - pwd
       - ls -la
-      - echo Moving imagedefinitions.json to $CODEBUILD_SRC_DIR for CodePipeline...
-      - mv imagedefinitions.json $CODEBUILD_SRC_DIR/imagedefinitions.json
+      - echo Moving imageDetail.json to $CODEBUILD_SRC_DIR for CodePipeline...
+      - mv imageDetail.json $CODEBUILD_SRC_DIR/imageDetail.json
       - echo Moving appspec-ecs and taskdef to root folder for CodePipeline...
       - mv ../specs/appspec-ecs.yaml $CODEBUILD_SRC_DIR/appspec.yml
       - mv ../specs/taskdef-ecs.json $CODEBUILD_SRC_DIR/taskdef.json
       - ls -la $CODEBUILD_SRC_DIR
 artifacts:
   files: 
-   - imagedefinitions.json
+   - imageDetail.json
    - appspec.yml
    - taskdef.json
