@@ -29,5 +29,4 @@ phases:
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
-      - IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
       - echo Build completed. Image URI: $IMAGE_URI
