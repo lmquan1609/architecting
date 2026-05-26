@@ -32,3 +32,7 @@ phases:
     commands:
       - echo Build completed. Image URI
       - echo $IMAGE_URI
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imagedefinitions.json
+      - cat imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
