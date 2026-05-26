@@ -29,4 +29,5 @@ phases:
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
-      - echo Build completed. Image URI: $IMAGE_URI
+      - echo Build completed. Image URI
+      - echo $IMAGE_URI
