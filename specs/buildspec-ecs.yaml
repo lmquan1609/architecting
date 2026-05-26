@@ -24,6 +24,7 @@ phases:
       - rm -f index-base.js
       - mv index-ecs.js index.js
       - mv package-ecs.json package.json
+      - ls -la
       - echo Check docker buildx version and build image for multiple platforms...
       - docker buildx version
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
