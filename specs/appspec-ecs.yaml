@@ -1,0 +1,9 @@
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: <TASK_DEFINITION_ARN> # Giữ nguyên chuỗi này, CodePipeline sẽ tự thay thế ARN thực tế
+        LoadBalancerInfo:
+          ContainerName: "CONTAINER_NAME" # Thay bằng tên container trong Task Definition của bạn
+          ContainerPort: 80               # Thay bằng port container của bạn
