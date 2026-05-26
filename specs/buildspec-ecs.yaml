@@ -34,5 +34,9 @@ phases:
       - echo $IMAGE_URI
       - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imagedefinitions.json
       - cat imagedefinitions.json
+      - pwd
+      - ls -la
+      - echo Moving imagedefinitions.json to $CODEBUILD_SRC_DIR for CodePipeline...
+      - mv imagedefinitions.json $CODEBUILD_SRC_DIR/imagedefinitions.json
 artifacts:
   files: imagedefinitions.json
