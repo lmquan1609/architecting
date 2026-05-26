@@ -24,7 +24,7 @@ app.get("/", async (req, res) => {
     const containerName = os.hostname();
     console.log("os hostname: ", os.hostname());
     const ip = containerIp.split(":")[3];
-    const version = 3;
+    const version = 4;
     const bgColor = BACKGROUND_COLOR;
     const html = `
     <html>
