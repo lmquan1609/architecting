@@ -49,6 +49,19 @@ Before running the pipeline, ensure the following exist:
 5. **ALB listener** on port 80 forwarding to `demo-uc3-tg-blue`
 6. **ALB test listener** on port 8080 forwarding to `demo-uc3-tg-green` *(used during canary to test green before full shift)*
 
+Command to create ECS Service (Blue/Green with CODE_DEPLOY deployment controller)
+
+```sh
+aws ecs create-service \
+    --cluster mycluster \
+    --service-name my-svc \
+    --task-definition my-td:1 \
+    --deployment-controller type=CODE_DEPLOY \
+    --desired-count 2 \
+    --launch-type FARGATE \
+    --network-configuration "awsvpcConfiguration={subnets=[subnet-0aff4ca2a21fb79b0,subnet-0faac0a4333c18e6f],securityGroups=[sg-01c828e9581d09303],assignPublicIp=ENABLED}" \
+    --load-balancers "[{\"targetGroupArn\": \"arn:aws:elasticloadbalancing:ap-southeast-1:123456789012:targetgroup/tg-blue/912c3062848e55ff\", \"containerName\": \"example\", \"containerPort\": 3001}]"
+```
 ---
 
 ## Step 1: Application & Docker Setup
@@ -172,20 +185,24 @@ artifacts:
 
 ## Step 3: `specs/taskdef.json`
 
-This is the ECS task definition template. CodeDeploy uses `imageDetail.json` to replace `<IMAGE_NAME>` with the newly built image URI.
+This is the ECS task definition template. CodeDeploy uses `imageDetail.json` to replace `<IMAGE1_NAME>` with the newly built image URI.
 
 ```json
 {
-  "family": "demo-webserver",
+  "family": "lab14-td",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::274595021951:role/ecs-task-execution-role",
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
   "containerDefinitions": [
     {
-      "name": "demo-webserver",
-      "image": "<IMAGE_NAME>",
+      "name": "example",
+      "image": "<IMAGE1_NAME>",
       "portMappings": [
         {
           "containerPort": 3001,
@@ -196,7 +213,7 @@ This is the ECS task definition template. CodeDeploy uses `imageDetail.json` to 
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/demo-webserver",
+          "awslogs-group": "/ecs/lab14-td",
           "awslogs-region": "ap-southeast-1",
           "awslogs-stream-prefix": "ecs"
         }
@@ -225,7 +242,7 @@ Resources:
       Properties:
         TaskDefinition: <TASK_DEFINITION>
         LoadBalancerInfo:
-          ContainerName: "demo-webserver"
+          ContainerName: "example"
           ContainerPort: 3001
 ```
 
