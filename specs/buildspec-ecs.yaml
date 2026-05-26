@@ -5,7 +5,7 @@ env:
     AWS_ACCOUNT_ID: "274595021951"       # replace with your account ID
     AWS_REGION: "ap-southeast-1"         # replace with your region
     ECR_REPO: "public/demo-lab14"      # replace with your ECR repo name
-    CONTAINER_NAME: "example" # must match container name in task definition
+    CONTAINER_NAME: "yourContainerName" # must match container name in task definition
     DOCKER_BUILDKIT: "1" # Enable BuildKit for better performance and multi-platform builds
 
 phases:
@@ -20,24 +20,10 @@ phases:
     commands:
       - echo Building Docker image...
       - cd app/
-      - ls -al
-      - rm -f index-base.js
-      - mv -f index-ecs.js index.js
-      - mv -f package-ecs.json package.json
       - echo Check docker buildx version and build image for multiple platforms...
       - docker buildx version
       - docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE_URI --push .  
   post_build:
     commands:
       - IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:$IMAGE_TAG
-      - echo Writing imagedefinitions.json...
-      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_URI > imagedefinitions.json
-      - cat imagedefinitions.json
-      - pwd
-      - echo Moving imagedefinitions.json to $CODEBUILD_SRC_DIR...
-      - mv imagedefinitions.json $CODEBUILD_SRC_DIR/imagedefinitions.json
-
-artifacts:
-  files:
-    - imagedefinitions.json
-  iscard-paths: yes   # Optional: Prevents original local folder structures from being created inside the zip file
+      - echo Build completed. Image URI: $IMAGE_URI
