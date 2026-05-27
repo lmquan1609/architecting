@@ -20,7 +20,7 @@ Parameters:
     Default: https://github.com/vietaws/architecting.git
   GitBranch:
     Type: String
-    Default: lab17-dr
+    Default: dev/cfn-3tiers
 
 Mappings:
   SubnetConfig:
