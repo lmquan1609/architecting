@@ -259,7 +259,9 @@ Resources:
   ImageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub inventory-images-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub
+        - inventory-images-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -276,7 +278,9 @@ Resources:
   EC2Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: inventory-ec2-role
+      RoleName: !Sub
+        - inventory-ec2-role-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -296,7 +300,9 @@ Resources:
                   - s3:PutObject
                   - s3:GetObject
                   - s3:DeleteObject
-                Resource: !Sub arn:aws:s3:::inventory-images-${AWS::AccountId}-${AWS::Region}/products/*
+                Resource: !Sub
+                  - arn:aws:s3:::inventory-images-${Suffix}/products/*
+                  - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -341,7 +347,9 @@ Resources:
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: inventory-alb
+      Name: !Sub
+        - inventory-alb-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       Scheme: internet-facing
       Subnets:
         - !Ref PublicSubnetA
@@ -352,7 +360,9 @@ Resources:
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: inventory-tg
+      Name: !Sub
+        - inventory-tg-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       Port: !Ref AppPort
       Protocol: HTTP
       VpcId: !Ref VPC
@@ -376,7 +386,9 @@ Resources:
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: inventory-lt
+      LaunchTemplateName: !Sub
+        - inventory-lt-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       LaunchTemplateData:
         ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
         InstanceType: t4g.micro
@@ -407,7 +419,7 @@ Resources:
               "${DBUsername}" \
               "${DBPassword}" \
               "${AppPort}" \
-              "inventory-images-${AWS::AccountId}-${AWS::Region}" \
+              "${ImageBucket}" \
               "${AWS::Region}" \
               > /home/ec2-user/architecting/.env
 
@@ -444,7 +456,9 @@ Resources:
       - NATGateway
       - AuroraInstance
     Properties:
-      AutoScalingGroupName: inventory-asg
+      AutoScalingGroupName: !Sub
+        - inventory-asg-${Suffix}
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       MinSize: '1'
       MaxSize: '4'
       DesiredCapacity: '2'
@@ -474,4 +488,4 @@ Outputs:
 
   S3BucketName:
     Description: S3 bucket for product images
-    Value: !Sub inventory-images-${AWS::AccountId}-${AWS::Region}
+    Value: !Ref ImageBucket
