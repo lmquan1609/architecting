@@ -440,22 +440,14 @@ Resources:
             psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
               -c "CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, qty INTEGER NOT NULL DEFAULT 0, image_url VARCHAR(1024));"
 
-            # Seed only if table is empty
-            COUNT=$(psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -t -A -c "SELECT COUNT(*) FROM products;")
-            if [ "$COUNT" = "0" ]; then
-              seed_product() {
-                local PNAME="$1" PQTY="$2" PSLUG="$3"
-                local PIMG="/tmp/$PSLUG.jpg"
-                local PS3KEY="products/$PSLUG.jpg"
-                curl -sL "https://picsum.photos/seed/$PSLUG/400/300" -o "$PIMG"
-                aws s3 cp "$PIMG" "s3://$BUCKET/$PS3KEY" --region "$REGION"
-                psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
-                  -c "INSERT INTO products (name, qty, image_url) VALUES ('$PNAME', $PQTY, '$PS3KEY');"
-              }
-              seed_product "Laptop"   15 "laptop"
-              seed_product "Mouse"    50 "mouse"
-              seed_product "Keyboard" 30 "keyboard"
-            fi
+            # Upload images to S3 from repo (idempotent - safe to run on multiple instances)
+            for PSLUG in laptop mouse keyboard; do
+              aws s3 cp "/home/ec2-user/architecting/images/$PSLUG.jpg" "s3://$BUCKET/products/$PSLUG.jpg" --region "$REGION"
+            done
+
+            # Seed DB using advisory lock - only one instance wins, others skip
+            psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
+              -c "DO \$body\$ BEGIN IF pg_try_advisory_lock(42) AND (SELECT COUNT(*) FROM products) = 0 THEN INSERT INTO products (name, qty, image_url) VALUES ('Laptop', 15, 'products/laptop.jpg'), ('Mouse', 50, 'products/mouse.jpg'), ('Keyboard', 30, 'products/keyboard.jpg'); END IF; END \$body\$;"
 
   ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
