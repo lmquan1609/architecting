@@ -35,14 +35,3 @@ Four strategies ordered by cost and recovery speed:
 | 2 | Pilot Light | 30–60 min | $$ |
 | 3 | Warm Standby | Minutes | $$$ |
 | 4 | Multi-Site Active/Active | Near-zero | $$$$ |
-
-## Generate the BCP Workbook
-
-Requires Python 3 and `openpyxl`:
-
-```bash
-pip install openpyxl
-python generate_bcp_excel.py
-```
-
-This produces an Excel workbook with the full BCP scenario library, colour-coded by severity and recovery level.
