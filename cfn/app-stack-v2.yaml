@@ -25,12 +25,6 @@ Parameters:
   AppPort:
     Type: Number
     Default: 3001
-  GitRepo:
-    Type: String
-    Default: https://github.com/vietaws/architecting.git
-  GitBranch:
-    Type: String
-    Default: lab17-dr
   AmiId:
     Type: String
     Description: AMI ID for EC2 instances in the ASG
