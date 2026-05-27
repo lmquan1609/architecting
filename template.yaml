@@ -426,8 +426,6 @@ Resources:
             DB_HOST="${AuroraCluster.Endpoint.Address}"
             DB_USER="${DBUsername}"
             DB_NAME="${DBName}"
-            BUCKET="inventory-images-${AWS::AccountId}-${AWS::Region}"
-            REGION="${AWS::Region}"
 
             # Wait up to 5 min for Aurora to accept connections
             for i in $(seq 1 20); do
@@ -439,15 +437,6 @@ Resources:
             # Create table
             psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
               -c "CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, qty INTEGER NOT NULL DEFAULT 0, image_url VARCHAR(1024));"
-
-            # Upload images to S3 from repo (idempotent - safe to run on multiple instances)
-            for PSLUG in laptop mouse keyboard; do
-              aws s3 cp "/home/ec2-user/architecting/images/$PSLUG.jpg" "s3://$BUCKET/products/$PSLUG.jpg" --region "$REGION"
-            done
-
-            # Seed DB using advisory lock - only one instance wins, others skip
-            psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
-              -c "DO \$body\$ BEGIN IF pg_try_advisory_lock(42) AND (SELECT COUNT(*) FROM products) = 0 THEN INSERT INTO products (name, qty, image_url) VALUES ('Laptop', 15, 'products/laptop.jpg'), ('Mouse', 50, 'products/mouse.jpg'), ('Keyboard', 30, 'products/keyboard.jpg'); END IF; END \$body\$;"
 
   ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
