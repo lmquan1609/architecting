@@ -21,6 +21,10 @@ Parameters:
   GitBranch:
     Type: String
     Default: lab17-dr
+  AmiId:
+    Type: String
+    Default: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+    Description: AMI ID for EC2 instances in the ASG
 
 Mappings:
   SubnetConfig:
@@ -390,7 +394,7 @@ Resources:
         - inventory-lt-${Suffix}
         - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       LaunchTemplateData:
-        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}'
+        ImageId: !Ref AmiId
         InstanceType: t4g.micro
         IamInstanceProfile:
           Arn: !GetAtt EC2InstanceProfile.Arn
