@@ -12,6 +12,9 @@ Parameters:
   S3BucketName:
     Type: String
     Description: Existing S3 bucket name for product images (MANDATORY)
+  AmiId:
+    Type: String
+    Description: AMI ID for EC2 instances in the ASG (MANDATORY)
   DBPassword:
     Type: String
     NoEcho: true
@@ -25,9 +28,7 @@ Parameters:
   AppPort:
     Type: Number
     Default: 3001
-  AmiId:
-    Type: String
-    Description: AMI ID for EC2 instances in the ASG
+  
 
 Resources:
 
