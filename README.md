@@ -2,18 +2,6 @@
 
 Reference materials for designing Business Continuity Plans (BCP) and Disaster Recovery (DR) solutions on AWS.
 
-## Contents
-
-| File | Description |
-|---|---|
-| `bcp-framework-v1.md` | BCP Framework v1 — foundational structure |
-| `bcp-framework-v2.md` | BCP Framework v2 — expanded components |
-| `bcp-framework-v3.md` | BCP Framework v3 — latest, includes scenario library |
-| `dr-solution-on-aws.md` | DR strategies on AWS (Backup & Restore → Multi-Site Active/Active) |
-| `aws-backup-restore-guide.md` | Deep-dive guide for the Backup & Restore DR strategy |
-| `generate_bcp_excel.py` | Script to generate a BCP scenario workbook (Excel) |
-| `bcp-scenario-library.xlsx` | Pre-built BCP scenario library spreadsheet |
-
 ## BCP Framework
 
 The BCP framework follows a four-phase lifecycle:
