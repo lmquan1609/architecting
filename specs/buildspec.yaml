@@ -17,13 +17,13 @@ phases:
       - grep -Fq "Hello" index.js && echo "Test passed!" || (echo "Test failed!" && exit 1)
   post_build:
     commands:
-      # - cd .. && mv specs/appspec.yaml ./appspec.yml  # move appspec.yaml to the root for packaging
+      - cd .. && mv specs/appspec.yaml ./appspec.yml  # move appspec.yaml to the root for packaging
       - echo "Build complete"
 
 artifacts:
   files:
     - app/**/*
     - scripts/**/*
-    - specs/appspec.yaml
+    - appspec.yml
   name: my-artifact-$(date +%Y-%m-%d-%H-%M-%S).zip
   discard-paths: no
