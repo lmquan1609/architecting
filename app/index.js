@@ -37,7 +37,7 @@ app.get('/', async (req, res) => {
   const instanceId = await getInstanceId();
   res.send(`
     <body style='background-color: #283E5B; text-align: center;color: orange;'>
-      <h2>Hello from AWS Architecting Lab - v1.5</h2>
+      <h2>Hello from AWS Architecting Lab - v1.6</h2>
       <h3>Instance ID: ${instanceId}</h3>
     </body>
   `);
