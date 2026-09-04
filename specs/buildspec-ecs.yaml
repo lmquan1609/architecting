@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    AWS_ACCOUNT_ID: "274595021951"       # replace with your account ID
+    AWS_ACCOUNT_ID: "445499112511"       # replace with your account ID
     AWS_REGION: "ap-southeast-1"         # replace with your region
     ECR_REPO: "public/lab14-demo"      # replace with your ECR repo name
     CONTAINER_NAME: "example" # must match container name in task definition
