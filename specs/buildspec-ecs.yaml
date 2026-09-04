@@ -28,7 +28,7 @@ phases:
     commands:
       - echo Build completed. Image URI
       - echo $IMAGE_URI
-      - printf '{"ImageURI":"%s"}' $IMAGE_URI > imageDetail.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$IMAGE_URI" > imageDetail.json
       - cat imageDetail.json
       - mv imageDetail.json $CODEBUILD_SRC_DIR/imageDetail.json
 artifacts:
