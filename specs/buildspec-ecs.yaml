@@ -30,6 +30,7 @@ phases:
       - echo $IMAGE_URI
       - printf '{"ImageURI":"%s"}' $IMAGE_URI > imageDetail.json
       - cat imageDetail.json
+      - mv imageDetail.json $CODEBUILD_SRC_DIR/imageDetail.json
 artifacts:
   files: 
    - imageDetail.json
