@@ -346,7 +346,7 @@ Outputs:
   AppSubnetB:
     Value: !Ref AppSubnetB
     Export:
-      Name: !Sub ${AWS::StackName}-AppSubnetB
+      Name: !Sub ${AWS::StackName}-AppSubnet
 
   DBSubnetA:
     Value: !Ref DBSubnetA
