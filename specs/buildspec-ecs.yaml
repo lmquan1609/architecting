@@ -29,7 +29,7 @@ phases:
       - echo Build completed. Image URI
       - echo $IMAGE_URI
       # - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$IMAGE_URI" > imageDetail.json
-      - printf '{"name":"%s","ImageURI":"%s"}' "$CONTAINER_NAME" "$IMAGE_URI" > imageDetail.json
+      - printf '{"name":"%s","imageURI":"%s"}' "$CONTAINER_NAME" "$IMAGE_URI" > imageDetail.json
       - cat imageDetail.json
       - echo Moving imageDetail.json to $CODEBUILD_SRC_DIR for CodePipeline...
       - mv imageDetail.json $CODEBUILD_SRC_DIR/imageDetail.json
